@@ -1,0 +1,231 @@
+﻿@model Final_Year_Project.Models.Account.AccountSettingViewModel
+
+@{
+    ViewData["Title"] = "Account Settings";
+}
+
+<div class="min-h-screen flex items-center justify-center bg-base-200">
+    <div class="w-full max-w-2xl">
+        <!-- Header -->
+        <div class="my-8">
+            <h1 class="text-4xl font-bold text-gray-800 mt-4">Account Settings</h1>
+            <p class="text-gray-600 mt-2">Update your profile information</p>
+        </div>
+
+        <!-- Alert Messages -->
+        @{
+            var alertClass = TempData["AlertClass"]?.ToString() ?? "";
+        }
+        @if (TempData["Info"] != null)
+        {
+            <div class="mb-6 p-4 rounded-xl border @(alertClass.Contains("success") ? "bg-green-50 border-green-200" : alertClass.Contains("danger") ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200")">
+                <p class="@(alertClass.Contains("success") ? "text-green-800" : alertClass.Contains("danger") ? "text-red-800" : "text-blue-800")">
+                    @TempData["Info"]
+                </p>
+            </div>
+        }
+
+        <!-- Edit Profile Card -->
+        <div class="bg-white shadow-md rounded-md p-8 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Profile</h2>
+
+            <form method="post" asp-action="AccountSetting" enctype="multipart/form-data" class="space-y-6">
+                @Html.AntiForgeryToken()
+                <!-- Email -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address<span class="text-error">*</span></label>
+                    <input type="email" asp-for="Email" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-md focus:border-gray-500 focus:outline-none focus:ring-0"
+                           placeholder="you@example.com" required />
+                    <p class="text-xs text-gray-500 mt-1">Must be unique and valid.</p>
+                    @if (ViewData.ModelState.ContainsKey(nameof(Model.Email)) && (ViewData.ModelState[nameof(Model.Email)]?.Errors.Count ?? 0) > 0)
+                    {
+                        <span class="text-red-500 text-sm mt-1 inline-block">
+                            @(ViewData.ModelState[nameof(Model.Email)]?.Errors.FirstOrDefault()?.ErrorMessage ?? "")
+                        </span>
+                    }
+                </div>
+
+                <!-- Username -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username<span class="text-error">*</span></label>
+                    <input type="text" asp-for="Username" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-md focus:border-gray-500 focus:outline-none focus:ring-0"
+                           placeholder="your_username" required />
+                    <p class="text-xs text-gray-500 mt-1">Unique, letters/numbers/underscore only.</p>
+                    @if (ViewData.ModelState.ContainsKey(nameof(Model.Username)) && (ViewData.ModelState[nameof(Model.Username)]?.Errors.Count ?? 0) > 0)
+                    {
+                        <span class="text-red-500 text-sm mt-1 inline-block">
+                            @(ViewData.ModelState[nameof(Model.Username)]?.Errors.FirstOrDefault()?.ErrorMessage ?? "")
+                        </span>
+                    }
+                </div>
+
+                <!-- Full Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name<span class="text-error">*</span></label>
+                    <input type="text" asp-for="Name" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-md focus:border-gray-500 focus:outline-none focus:ring-0"
+                           placeholder="John Doe" required />
+                    <p class="text-xs text-gray-500 mt-1">Letters only.</p>
+                    @if (ViewData.ModelState.ContainsKey(nameof(Model.Name)) && (ViewData.ModelState[nameof(Model.Name)]?.Errors.Count ?? 0) > 0)
+                    {
+                        <span class="text-red-500 text-sm mt-1 inline-block">
+                            @(ViewData.ModelState[nameof(Model.Name)]?.Errors.FirstOrDefault()?.ErrorMessage ?? "")
+                        </span>
+                    }
+                </div>
+
+                <!-- Profile Picture -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Profile Picture</label>
+                    <div class="relative w-36 h-36">
+                        <div id="imagePreviewContainer" class="w-full h-full border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center bg-gray-50 cursor-pointer hover:border-gray-400 transition-colors duration-200 ease-in-out overflow-hidden">
+                            <span id="imagePlaceholder" class="text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+                                    <path d="M8 4v8M4 8h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </span>
+                            <img id="imagePreview" src="@Model.ProfilePicUrl" alt="Preview" class="hidden w-full h-full object-cover rounded-full" />
+                            <button type="button" id="removeImageBtn" class="cursor-pointer hidden absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-opacity-80 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" fill="none">
+                                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                </svg>
+                            </button>
+                        </div>
+                        <input type="hidden" id="RemoveProfilePic" name="RemoveProfilePic" value="false" />
+                    </div>
+                    <input asp-for="ProfilePicFile" type="file" accept="image/*" id="profilePicInput" class="hidden" />
+                    @if (ViewData.ModelState.ContainsKey(nameof(Model.ProfilePicFile)) && (ViewData.ModelState[nameof(Model.ProfilePicFile)]?.Errors.Count ?? 0) > 0)
+                    {
+                        <span class="text-red-500 text-sm mt-1 inline-block">@(ViewData.ModelState[nameof(Model.ProfilePicFile)]?.Errors.FirstOrDefault()?.ErrorMessage ?? "")</span>
+                    }
+                </div>
+
+                <!-- Gender -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Gender<span class="text-error">*</span></label>
+                    <div class="flex space-x-4 mt-2">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input asp-for="Gender" type="radio" value="male" class="radio radio-primary" />
+                            <span>Male</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input asp-for="Gender" type="radio" value="female" class="radio radio-primary" />
+                            <span>Female</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input asp-for="Gender" type="radio" value="other" class="radio radio-primary" />
+                            <span>Other</span>
+                        </label>
+                    </div>
+                    @if (ViewData.ModelState.ContainsKey(nameof(Model.Gender)) && (ViewData.ModelState[nameof(Model.Gender)]?.Errors.Count ?? 0) > 0)
+                    {
+                        <span class="text-red-500 text-sm mt-1 inline-block">@(ViewData.ModelState[nameof(Model.Gender)]?.Errors.FirstOrDefault()?.ErrorMessage ?? "")</span>
+                    }
+                </div>
+
+                <!-- Birthday -->
+                <div class="w-2/3">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Birthday</label>
+                    <input asp-for="DOB" type="date" class="w-full px-4 py-3 border border-gray-300 rounded-md focus:border-gray-500 focus:outline-none focus:ring-0" value="@(Model.DOB.HasValue ? Model.DOB.Value.ToString("yyyy-MM-dd") : "")" />
+                    @if (ViewData.ModelState.ContainsKey(nameof(Model.DOB)) && (ViewData.ModelState[nameof(Model.DOB)]?.Errors.Count ?? 0) > 0)
+                    {
+                        <span class="text-red-500 text-sm mt-1 inline-block">@(ViewData.ModelState[nameof(Model.DOB)]?.Errors.FirstOrDefault()?.ErrorMessage ?? "")</span>
+                    }
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 py-3 btn btn-primary text-white font-semibold rounded-md hover:shadow-lg transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Save Changes
+                    </button>
+                    <a href="/Account/change-password" class="flex-1 py-3 btn btn-outline font-semibold rounded-md hover:bg-gray-100 transition text-center flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-lock-fill" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4m0 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3" />
+                        </svg>
+                        Change Password
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Account Info Card -->
+        <div class="bg-white shadow-md rounded-md p-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">Account Information</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 bg-gradient-to-br from-rose-50 to-transparent rounded-xl">
+                    <p class="text-sm font-medium text-gray-600">Account Type</p>
+                    <p class="text-lg font-semibold text-gray-800 mt-2 capitalize">@Model.Role</p>
+                </div>
+                <div class="p-4 bg-gradient-to-br from-blue-50 to-transparent rounded-xl">
+                    <p class="text-sm font-medium text-gray-600">User ID</p>
+                    <p class="text-lg font-semibold text-gray-800 mt-2">@Model.UId</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const imagePreviewContainer = document.getElementById("imagePreviewContainer");
+            const profilePicInput = document.getElementById("profilePicInput");
+            const imagePreview = document.getElementById("imagePreview");
+            const imagePlaceholder = document.getElementById("imagePlaceholder");
+            const removeImageBtn = document.getElementById("removeImageBtn");
+            const removeProfileInput = document.getElementById("RemoveProfilePic");
+
+            if (imagePreviewContainer) imagePreviewContainer.addEventListener('click', () => profilePicInput.click());
+
+            if (profilePicInput) profilePicInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+                    profilePicInput.value = "";
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    imagePreview.src = ev.target.result;
+                    imagePreview.classList.remove('hidden');
+                    imagePlaceholder.classList.add('hidden');
+                    removeImageBtn.classList.remove('hidden');
+                    imagePreviewContainer.classList.remove('border-dashed', 'bg-gray-50');
+                    imagePreviewContainer.classList.add('border-solid');
+                    if (removeProfileInput) removeProfileInput.value = 'false';
+                };
+                reader.readAsDataURL(file);
+            });
+
+            if (removeImageBtn) removeImageBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                imagePreview.src = '';
+                imagePreview.classList.add('hidden');
+                imagePlaceholder.classList.remove('hidden');
+                removeImageBtn.classList.add('hidden');
+                imagePreviewContainer.classList.add('border-dashed', 'bg-gray-50');
+                imagePreviewContainer.classList.remove('border-solid');
+                profilePicInput.value = '';
+                if (removeProfileInput) removeProfileInput.value = 'true';
+            });
+
+            // If existing image URL provided, show it
+            const existingImageUrl = "@Model.ProfilePicUrl";
+            if (existingImageUrl && existingImageUrl.trim() !== "") {
+                imagePreview.src = existingImageUrl;
+                imagePreview.classList.remove('hidden');
+                imagePlaceholder.classList.add('hidden');
+                removeImageBtn.classList.remove('hidden');
+                imagePreviewContainer.classList.remove('border-dashed', 'bg-gray-50');
+                imagePreviewContainer.classList.add('border-solid');
+                if (removeProfileInput) removeProfileInput.value = 'false';
+            }
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

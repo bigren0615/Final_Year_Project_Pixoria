@@ -1,0 +1,112 @@
+﻿@model IEnumerable<Final_Year_Project.Models.Cart.CartViewModel>
+
+<div class="max-w-6xl mx-auto mt-10 bg-base-200 p-6 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Your Cart</h2>
+    @if (TempData["Error"] != null)
+    {
+        <div class="bg-red-100 text-red-700 px-4 py-2 rounded mb-3">
+            @TempData["Error"]
+        </div>
+    }
+    @if (TempData["Success"] != null)
+    {
+        <div class="bg-green-100 text-green-700 px-4 py-2 rounded mb-3">
+            @TempData["Success"]
+        </div>
+    }
+    @if (Model != null && Model.Any())
+    {
+        <form asp-action="UpdateCart" method="post">
+            <div class="overflow-x-auto">
+                <table class="table w-full border border-gray-200 rounded-lg">
+                    <thead class="bg-gray-100">
+                        <tr class="text-gray-700 text-left">
+                            <th class="p-3">Artwork</th>
+                            <th class="p-3">Name</th>
+                            <th class="p-3 text-center">Price (RM)</th>
+                            <th class="p-3 text-center">Shipping Fee (RM)</th>
+                            <th class="p-3">Quantity</th>
+                            <th class="p-3 text-center">Total (RM)</th>
+                            <th class="p-3 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="border-b hover:bg-gray-50 transition">
+                                <td class="p-3">
+                                    <img src="@item.Image"
+                                         alt="@item.ArtworkName"
+                                         class="w-16 h-16 object-cover rounded" />
+                                </td>
+                                <td class="p-3 font-medium">@item.ArtworkName</td>
+                                <td class="p-3 text-right">@item.Price.ToString("F2")</td>
+                                <td class="p-3 text-right">@item.ShippingFee.ToString("F2")</td>
+                                <td class="p-3">
+                                    <input type="number"
+                                           name="quantity"
+                                           value="@item.Quantity"
+                                           min="1"
+                                           max="@item.StockAvailable"
+                                           class="w-20 border border-gray-300 rounded-lg px-2 py-1 text-center focus:ring-2 focus:ring-pink-400" />
+                                </td>
+                                <td class="p-3 font-semibold text-right">
+                                    @(((item.Price + item.ShippingFee) * item.Quantity).ToString("F2"))
+                                </td>
+                                <td class="p-3 text-center flex justify-center gap-3">
+                                    <button type="submit"
+                                            formaction="@Url.Action("UpdateItem", "Cart", new { pid = item.PId })"
+                                            class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                        Update
+                                    </button>
+
+                                    <button type="button"
+                                            onclick="confirmDelete('@Url.Action("DeleteItem", "Cart", new { pid = item.PId })')"
+                                            class="p-2 bg-base-200 text-gray rounded hover:bg-red-600 transition flex items-center justify-center"
+                                            title="Remove Item">
+
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                             viewBox="0 0 25 25"
+                                             stroke-width="1.5"
+                                             class="w-5 h-5">
+                                            <path stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  d="M6 1h13v1H6zM23 3H2v1h2v18.5A1.502 1.502 0 0 0 5.5 24h14a1.502 1.502 0 0 0 1.5-1.5V4h2zM9 20H8V7h1zm4 0h-1V7h1zm4 0h-1V7h1z" />
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </form>
+
+        var total = Model.Sum(item => (item.Price + item.ShippingFee) * item.Quantity);
+        <div class="flex justify-end mt-4 text-lg font-semibold text-gray-800">
+            <p>Total: RM @total.ToString("F2")</p>
+        </div>
+
+        <div class="flex justify-end mt-6">
+            <a href="/Cart/ViewCheckout" class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-lg shadow-md transition">
+                Proceed to Checkout
+            </a>
+        </div>
+    }
+    else
+    {
+        <p class="text-gray-500 text-center py-10 text-lg">Your cart is empty.</p>
+    }
+</div>
+
+@section Scripts{
+    <script>
+        function confirmDelete(url) {
+            if (confirm("Are you sure?")) {
+                fetch(url, { method: 'POST' })
+                    .then(() => location.reload());
+            }
+        }
+
+    </script>
+}

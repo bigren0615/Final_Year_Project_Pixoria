@@ -1,0 +1,424 @@
+﻿@model Final_Year_Project.Models.Profile.ProfileEditViewModel
+@{
+	ViewData["Title"] = "Edit Profile";
+}
+
+<div id="alertContainer" class="fixed top-5 right-5 z-50 space-y-3 w-80"></div>
+<div class="min-h-screen bg-base-200 flex justify-center">
+	<div class="max-w-4xl w-full mt-10 bg-base-100 card shadow-md">
+		<div class="card-body">
+			<h1 class="text-2xl font-bold text-gray-800 mb-4">Profile Edit</h1>
+			@using (Html.BeginForm("ProfileEdit", "Profile", FormMethod.Post, new { enctype = "multipart/form-data" }))
+			{
+				@Html.AntiForgeryToken()
+				<div class="px-6 space-y-6">
+					<div>
+						<label class="block font-semibold text-gray-800 mb-3">Banner Image</label>
+						<div id="bannerPreviewContainer" 
+							 class="w-full h-78 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 cursor-pointer hover:border-gray-400 transition-colors duration-200 ease-in-out overflow-hidden relative">
+							<span id="bannerPlaceholder" class="text-gray-500 text-center">
+								<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52"
+									 fill="none" viewBox="0 0 16 16" class="bi bi-plus mx-auto mb-2">
+									<path d="M8 4v8M4 8h8"
+										  stroke="currentColor" stroke-width="1.6"
+										  stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+								<p class="text-sm">Click to upload banner image</p>
+							</span>
+							<img id="bannerPreview" src="" alt="Banner Preview" class="hidden w-full h-full object-cover" />
+							<button type="button" id="removeBannerBtn"
+									class="cursor-pointer hidden absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-80 transition">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="none">
+									<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+								</svg>
+							</button>
+							<input type="hidden" id="RemoveBannerImage" name="RemoveBannerImage" value="false" />
+						</div>
+						@Html.TextBoxFor(m => m.BannerImageFile, new { type = "file", accept = "image/*", @class = "hidden", id = "bannerInput" })
+					</div>
+
+					<div>
+						<label class="block font-semibold text-gray-800 mb-1">Artwork Collection</label>
+						<div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="artworkGrid">
+							@foreach (var art in Model.Artworks)
+							{
+								<label for="artwork-modal-@art.ProfArtid" class="artwork-item cursor-pointer relative group rounded-md overflow-hidden aspect-square bg-base-200">
+									<img src="@art.ImageUrl" alt="Artwork" class="w-full h-full object-cover object-top" />
+									<button type="button"
+											class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity remove-existing" data-id="@art.ProfArtid">
+										<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+											 stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+										</svg>
+									</button>
+								</label>
+
+								<input type="checkbox" id="artwork-modal-@art.ProfArtid" class="modal-toggle" />
+								<div class="modal">
+									<div class="modal-box p-0 bg-base-100 shadow-none max-w-none w-auto h-auto overflow-hidden"
+										 style="border-radius: 0 !important;">
+										<label for="artwork-modal-@art.ProfArtid" class="btn btn-sm btn-circle absolute right-3 top-3">✕</label>
+										<img src="@art.ImageUrl"
+											 alt="Artwork Full"
+											 loading="lazy"
+											 class="w-full h-auto max-h-[80vh] object-contain bg-base-200" />
+									</div>
+									<label class="modal-backdrop" for="artwork-modal-@art.ProfArtid"></label>
+								</div>
+							}
+
+							<label id="addArtworkSlot" for="artworkInput"
+								   class="flex flex-col bg-gray-50 justify-center items-center border-2 border-dashed border-gray-300 rounded-md aspect-square cursor-pointer hover:border-gray-400 transition-colors duration-200 ease-in-out">
+								<span class="text-gray-500">
+									<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52"
+										 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+										<path d="M8 4v8M4 8h8"
+											  stroke="currentColor" stroke-width="1.6"
+											  stroke-linecap="round" stroke-linejoin="round" />
+									</svg>
+								</span>
+							</label>
+							<input name="ArtworkFiles" id="artworkInput" type="file" multiple accept="image/*" class="hidden" />
+
+							<input type="hidden" id="ArtworksToDelete" name="ArtworksToDelete" value="" />
+						</div>
+					</div>
+
+					<div>
+						<label class="block font-semibold text-gray-800 mb-1">Profile Picture</label>
+						<div class="relative w-48 h-48">
+							<div id="imagePreviewContainer" class="w-full h-full border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center bg-gray-50 cursor-pointer hover:border-gray-400 transition-colors duration-200 ease-in-out overflow-hidden">
+								<span id="imagePlaceholder" class="text-gray-500">
+									<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52"
+										 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+										<path d="M8 4v8M4 8h8"
+											  stroke="currentColor" stroke-width="1.6"
+											  stroke-linecap="round" stroke-linejoin="round" />
+									</svg>
+								</span>
+								<img id="imagePreview" src="" alt="Preview" class="hidden w-full h-full object-cover rounded-full" />
+								<button type="button" id="removeImageBtn"
+										class="cursor-pointer hidden absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-opacity-80 transition">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" fill="none">
+										<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+									</svg>
+								</button>
+								<input type="hidden" id="RemoveCoverImage" name="RemoveCoverImage" value="false" />
+							</div>
+							@Html.TextBoxFor(m => m.ProfilePicFile, new { type = "file", accept = "image/*", @class = "hidden", id = "coverImageInput" })
+						</div>
+					</div>
+
+					<div class="w-2/3">
+						<label class="block font-semibold text-gray-800 mb-1">Nickname<span class="text-error">*</span></label>
+						<div class="relative">
+							@Html.TextBoxFor(m => m.Nickname, new { @class = "w-full border border-gray-300 rounded-md px-4 pr-18 py-2 focus:border-gray-500 focus:outline-none focus:ring-0", maxlength = "15", id = "nameInput" })
+							<div id="nameCountContainer" class="absolute bottom-2 right-3 text-sm text-gray-500 pointer-events-none">
+								<span id="nameCount">0</span><span class="ml-1">/ 15</span>
+							</div>
+						</div>
+						@Html.ValidationMessageFor(m => m.Nickname, "", new { @class = "text-error text-sm" })
+					</div>
+
+					<div>
+						<label class="block font-semibold text-gray-800 mb-1">About Me</label>
+						<div class="relative">
+							@Html.TextAreaFor(m => m.AboutMe, 5, 40, new { @class = "w-full border border-gray-300 rounded-md px-4 pr-18 py-2 focus:border-gray-500 focus:outline-none focus:ring-0 resize-none", maxlength = "1000", id = "aboutInput" })
+							<div id="aboutCountContainer" class="absolute bottom-2 right-3 text-sm text-gray-500 pointer-events-none">
+								<span id="aboutCount">0</span><span class="ml-1">/ 1000</span>
+							</div>
+						</div>
+						@Html.ValidationMessageFor(m => m.AboutMe, "", new { @class = "text-error text-sm" })
+					</div>
+
+					<div>
+						<label class="block font-semibold text-gray-800 mb-1">Gender<span class="text-error">*</span></label>
+						<div class="flex space-x-4 mt-2">
+							<label class="flex items-center space-x-2 cursor-pointer">
+								@Html.RadioButtonFor(m => m.Gender, "male", new { @class = "radio radio-primary" })
+								<span>Male</span>
+							</label>
+
+							<label class="flex items-center space-x-2 cursor-pointer">
+								@Html.RadioButtonFor(m => m.Gender, "female", new { @class = "radio radio-primary" })
+								<span>Female</span>
+							</label>
+
+							<label class="flex items-center space-x-2 cursor-pointer">
+								@Html.RadioButtonFor(m => m.Gender, "other", new { @class = "radio radio-primary" })
+								<span>Other</span>
+							</label>
+						</div>
+						@Html.ValidationMessageFor(m => m.Gender, "", new { @class = "text-error text-sm" })
+					</div>
+
+					<div class="w-2/3">
+						<label class="block font-semibold text-gray-800 mb-1">Birthday</label>
+						@Html.TextBox("DOB",
+						Model.DOB.HasValue? Model.DOB.Value.ToString("yyyy-MM-dd") : "",
+										new { type = "date", @class = "input input-bordered w-full focus:border-gray-500 focus:outline-none focus:ring-0 resize-none" })
+						@Html.ValidationMessageFor(m => m.DOB, "", new { @class = "text-error text-sm" })
+					</div>
+
+					<div class="flex flex-col items-center mt-10 space-y-3">
+						<button type="submit" class="btn btn-primary text-white">
+							<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-floppy2-fill" viewBox="0 0 16 16">
+								<path d="M12 2h-2v3h2z" />
+								<path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v13A1.5 1.5 0 0 0 1.5 16h13a1.5 1.5 0 0 0 1.5-1.5V2.914a1.5 1.5 0 0 0-.44-1.06L14.147.439A1.5 1.5 0 0 0 13.086 0zM4 6a1 1 0 0 1-1-1V1h10v4a1 1 0 0 1-1 1zM3 9h10a1 1 0 0 1 1 1v5H2v-5a1 1 0 0 1 1-1" />
+							</svg>
+							Save Profile
+						</button>
+					</div>
+				</div>
+
+			}
+		</div>
+	</div>
+</div>
+@section Scripts {
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
+			const artworkInput = document.getElementById('artworkInput');
+			const artworkGrid = document.getElementById('artworkGrid');
+			const addSlot = document.getElementById('addArtworkSlot');
+			const maxArtworks = 8;
+			let deleteList = [];
+			let newFiles = [];
+
+			// Banner image handling
+			const bannerPreviewContainer = document.getElementById("bannerPreviewContainer");
+			const bannerInput = document.getElementById("bannerInput");
+			const bannerPreview = document.getElementById("bannerPreview");
+			const bannerPlaceholder = document.getElementById("bannerPlaceholder");
+			const removeBannerBtn = document.getElementById("removeBannerBtn");
+			const removeBannerInput = document.getElementById("RemoveBannerImage");
+
+			const imagePreviewContainer = document.getElementById("imagePreviewContainer");
+			const coverImageInput = document.getElementById("coverImageInput");
+			const imagePreview = document.getElementById("imagePreview");
+			const imagePlaceholder = document.getElementById("imagePlaceholder");
+			const removeImageBtn = document.getElementById("removeImageBtn");
+			const removeCoverInput = document.getElementById("RemoveCoverImage");
+
+			const nameInput = document.getElementById("nameInput");
+			const nameCount = document.getElementById("nameCount");
+			const nameCountContainer = document.getElementById("nameCountContainer");
+			const nameMaxLen = 15;
+
+			const aboutInput = document.getElementById("aboutInput");
+			const aboutCount = document.getElementById("aboutCount");
+			const aboutCountContainer = document.getElementById("aboutCountContainer");
+			const aboutMaxLen = 1000;
+
+			// Banner image event listeners
+			bannerPreviewContainer.addEventListener("click", () => bannerInput.click());
+			removeBannerBtn.addEventListener("click", handleRemoveBanner);
+			bannerInput.addEventListener("change", handleBannerUpload);
+
+			imagePreviewContainer.addEventListener("click", () => coverImageInput.click());
+			removeImageBtn.addEventListener("click", handleRemoveImage);
+			coverImageInput.addEventListener("change", handleImageUpload);
+
+			function handleBannerUpload(e) {
+				const file = e.target.files[0];
+				if (!file) return;
+				if (!["image/jpeg", "image/png"].includes(file.type)) {
+					bannerInput.value = "";
+					return;
+				}
+				const reader = new FileReader();
+				reader.onload = (event) => {
+					bannerPreview.src = event.target.result;
+					bannerPreview.classList.remove("hidden");
+					bannerPlaceholder.classList.add("hidden");
+					removeBannerBtn.classList.remove("hidden");
+					bannerPreviewContainer.classList.remove("border-dashed", "bg-gray-50");
+					bannerPreviewContainer.classList.add("border-solid");
+
+					if (removeBannerInput) removeBannerInput.value = "false";
+				};
+				reader.readAsDataURL(file);
+			}
+
+			function handleRemoveBanner(e) {
+				e.stopPropagation();
+				bannerPreview.src = "";
+				bannerPreview.classList.add("hidden");
+				bannerPlaceholder.classList.remove("hidden");
+				removeBannerBtn.classList.add("hidden");
+				bannerPreviewContainer.classList.add("border-dashed", "bg-gray-50");
+				bannerPreviewContainer.classList.remove("border-solid");
+				bannerInput.value = "";
+
+				if (removeBannerInput) removeBannerInput.value = "true";
+			}
+
+			function handleImageUpload(e) {
+				const file = e.target.files[0];
+				if (!file) return;
+				if (!["image/jpeg", "image/png"].includes(file.type)) {
+					coverImageInput.value = "";
+					return;
+				}
+				const reader = new FileReader();
+				reader.onload = (event) => {
+					imagePreview.src = event.target.result;
+					imagePreview.classList.remove("hidden");
+					imagePlaceholder.classList.add("hidden");
+					removeImageBtn.classList.remove("hidden");
+					imagePreviewContainer.classList.remove("border-dashed", "bg-gray-50");
+					imagePreviewContainer.classList.add("border-solid");
+
+					if (removeCoverInput) removeCoverInput.value = "false";
+				};
+				reader.readAsDataURL(file);
+			}
+
+			function handleRemoveImage(e) {
+				e.stopPropagation();
+				imagePreview.src = "";
+				imagePreview.classList.add("hidden");
+				imagePlaceholder.classList.remove("hidden");
+				removeImageBtn.classList.add("hidden");
+				imagePreviewContainer.classList.add("border-dashed", "bg-gray-50");
+				imagePreviewContainer.classList.remove("border-solid");
+				coverImageInput.value = "";
+
+				if (removeCoverInput) removeCoverInput.value = "true";
+			}
+
+			const existingImageUrl = "@Model.ProfilePicUrl";
+				if (existingImageUrl && existingImageUrl.trim() !== "") {
+					imagePreview.src = existingImageUrl;
+					imagePreview.classList.remove("hidden");
+					imagePlaceholder.classList.add("hidden");
+					removeImageBtn.classList.remove("hidden");
+					imagePreviewContainer.classList.remove("border-dashed", "bg-gray-50");
+					imagePreviewContainer.classList.add("border-solid");
+
+					if (removeCoverInput) removeCoverInput.value = "false";
+			}
+
+			const existingBannerUrl = "@Model.BannerImageUrl";
+			if (existingBannerUrl && existingBannerUrl.trim() !== "") {
+				bannerPreview.src = existingBannerUrl;
+				bannerPreview.classList.remove("hidden");
+				bannerPlaceholder.classList.add("hidden");
+				removeBannerBtn.classList.remove("hidden");
+				bannerPreviewContainer.classList.remove("border-dashed", "bg-gray-50");
+				bannerPreviewContainer.classList.add("border-solid");
+
+				if (removeBannerInput) removeBannerInput.value = "false";
+			}
+
+			nameInput.addEventListener("input", updateNameCount);
+			aboutInput.addEventListener("input", updateAboutCount);
+
+			function updateNameCount() {
+				const currentLen = nameInput.value.length;
+				nameCount.textContent = currentLen;
+				nameCountContainer.classList.toggle("text-red-500", currentLen > nameMaxLen);
+				nameCountContainer.classList.toggle("text-gray-500", currentLen <= nameMaxLen);
+			}
+
+			function updateAboutCount() {
+				const currentLen = aboutInput.value.length;
+				aboutCount.textContent = currentLen;
+				aboutCountContainer.classList.toggle("text-red-500", currentLen > aboutMaxLen);
+				aboutCountContainer.classList.toggle("text-gray-500", currentLen <= aboutMaxLen);
+			}
+
+			updateNameCount();
+			updateAboutCount();
+
+			artworkInput.addEventListener('change', (e) => {
+				const selected = Array.from(e.target.files);
+				const existingCount = artworkGrid.querySelectorAll('.artwork-item').length;
+				const total = existingCount + selected.length;
+
+				if (total > maxArtworks) {
+					showAlert(`You can upload up to ${maxArtworks} artworks only.`, "warning");
+					artworkInput.value = "";
+					return;
+				}
+
+				newFiles = newFiles.concat(selected);
+
+				selected.forEach(file => {
+					const reader = new FileReader();
+					reader.onload = (ev) => {
+						const div = document.createElement('div');
+						div.className = 'artwork-item relative group rounded-md overflow-hidden aspect-square bg-base-200';
+						div.innerHTML = `
+							<img src="${ev.target.result}" class="w-full h-full object-cover object-top" />
+							<button type="button"
+								class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity remove-new" data-name="${file.name}">
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+									stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							</button>
+						`;
+						artworkGrid.insertBefore(div, addSlot);
+					};
+					reader.readAsDataURL(file);
+				});
+
+				artworkInput.value = "";
+			});
+
+			artworkGrid.addEventListener('click', (e) => {
+				if (e.target.closest('.remove-existing')) {
+					const btn = e.target.closest('.remove-existing');
+					const id = btn.dataset.id;
+					deleteList.push(id);
+					btn.closest('.artwork-item').remove();
+					document.getElementById('ArtworksToDelete').value = deleteList.join(',');
+				}
+			});
+
+			artworkGrid.addEventListener('click', (e) => {
+				if (e.target.closest('.remove-new')) {
+					const btn = e.target.closest('.remove-new');
+					const filename = btn.dataset.name;
+					const item = btn.closest('.artwork-item');
+					item.remove();
+
+					newFiles = newFiles.filter(f => f.name !== filename);
+				}
+			});
+
+			document.querySelector('form').addEventListener('submit', (e) => {
+				const dt = new DataTransfer();
+				newFiles.forEach(f => dt.items.add(f));
+				artworkInput.files = dt.files;
+			});
+		});
+
+		function showAlert(message, type = "info") {
+			const container = document.getElementById("alertContainer");
+			const alert = document.createElement("div");
+
+			let alertClass = "alert-info";
+			if (type === "success") alertClass = "alert-success";
+			if (type === "warning") alertClass = "alert-warning";
+			if (type === "error") alertClass = "alert-error";
+
+			alert.className = `alert ${alertClass} shadow-lg animate-fade-in-down`;
+			alert.innerHTML = `
+				<svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+						d="M13 16h-1v-4h-1m1-4h.01M12 8v.01M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z" />
+				</svg>
+				<span>${message}</span>
+			`;
+
+			container.appendChild(alert);
+			setTimeout(() => {
+				alert.classList.add("opacity-0", "transition-opacity", "duration-500");
+				setTimeout(() => alert.remove(), 500);
+			}, 3000);
+		}
+	</script>
+	<partial name="_ValidationScriptsPartial" />
+}

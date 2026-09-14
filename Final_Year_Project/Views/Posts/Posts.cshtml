@@ -1,0 +1,687 @@
+﻿@using Final_Year_Project.Enums
+@inject Final_Year_Project.Services.EnumService EnumService
+@model Final_Year_Project.Models.Posts.PostsViewModel
+@{
+	ViewData["Title"] = Model.Title ?? "No TItle";
+}
+@if (Model.ArtistProfile != null)
+{
+	@await Html.PartialAsync("~/Views/Profile/_ProfileHeader.cshtml", Model.ArtistProfile)
+}
+<div class="min-h-screen bg-base-200 flex justify-center">
+	<div class="max-w-4xl w-full mt-10 bg-base-100 card shadow-md">
+		<div class="card-body p-0">
+			@if (!string.IsNullOrEmpty(Model.CoverImageUrl))
+			{
+				<figure class="h-100 overflow-hidden">
+					<img src="@Model.CoverImageUrl" alt="@Model.Title" loading="lazy" class="w-full h-full object-cover" />
+				</figure>
+			}
+			<div class="py-8 px-8">
+				<p class="flex items-center justify-between text-2xl font-semibold">
+					<span class="flex items-center gap-2">
+						@Model.Title
+						@if (Model.Status == postsStatus.@private)
+						{
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+								 class="bi bi-lock-fill text-gray-500 flex-shrink-0" viewBox="0 0 16 16">
+								<path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4m0 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3" />
+							</svg>
+						}
+					</span>
+					@if (Model.IsOwner)
+					{
+						<a href="/Posts/@Model.PostId/edit" class="text-sm hover:underline">Edit post</a>
+					}
+				</p>
+				<p class="text-xs text-gray-500">
+					@Model.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")・
+					@if (Model.Price != null && Model.Price >= 0)
+					{
+						<span>@Model.PlanName - RM @((Model.Price ?? 0).ToString("F2"))</span>
+					}
+					else
+					{
+						<span>All User</span>
+					}
+				</p>
+				@if (Model.Tags != null && Model.Tags.Any())
+				{
+					<div class="flex flex-wrap gap-2 mt-2">
+						@foreach (var tag in Model.Tags)
+						{
+							<span class="badge badge-sm badge-outline">@tag</span>
+						}
+					</div>
+				}
+				@if (Model.IsSubscribed)
+				{
+					<div id="postContent" class="pt-5 prose max-w-none"></div>
+					<script id="postData" type="application/json">
+						@Html.Raw(Model.Content)
+					</script>
+				}
+				else
+				{
+					<div class="pt-5 text-center">
+						<div class="flex justify-center mb-6">
+							<svg xmlns="http://www.w3.org/2000/svg"
+								 viewBox="0 0 24 24"
+								 fill="currentColor"
+								 class="w-20 h-20 text-base-content/60">
+								<path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z"
+									  clip-rule="evenodd" />
+							</svg>
+						</div>
+						<p class="text-base-content/60 mb-4">
+							Subscribe <span class="font-bold">RM @((Model.Price ?? 0).ToString("F2"))</span>/month or more to see this content
+						</p>
+						<a href="/Profile/@Model.UId/plans" class="btn btn-primary px-10 rounded-md text-white">
+							Support
+						</a>
+					</div>
+				}
+			</div>
+		</div>
+
+		<!-- Like Button Section (Fanbox-style) - Between content and comments, aligned right -->
+		<div class="flex justify-end items-center px-8 py-4 border-t border-base-200">
+			@if (User.Identity != null && User.Identity.IsAuthenticated)
+			{
+				<button id="likeBtn" type="button" onclick="toggleLike(@Model.PostId)" 
+					class="btn btn-ghost btn-sm gap-2 hover:bg-pink-50 hover:text-pink-500 transition-colors @(Model.IsLiked ? "text-pink-500" : "text-gray-500")">
+					<svg id="likeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
+						class="w-6 h-6 transition-transform hover:scale-110 @(Model.IsLiked ? "fill-current" : "fill-none stroke-current")" 
+						stroke-width="1.5">
+						<path stroke-linecap="round" stroke-linejoin="round" 
+							d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+					</svg>
+					<span id="likeCount" class="font-medium">@Model.LikeCount</span>
+				</button>
+			}
+			else
+			{
+				<a href="/Account/Login" class="btn btn-ghost btn-sm gap-2 text-gray-500 hover:bg-pink-50 hover:text-pink-500 transition-colors">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
+						class="w-6 h-6 fill-none stroke-current" stroke-width="1.5">
+						<path stroke-linecap="round" stroke-linejoin="round" 
+							d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+					</svg>
+					<span class="font-medium">@Model.LikeCount</span>
+				</a>
+			}
+		</div>
+
+		<!-- Comments Section -->
+		<div class="mt-6 bg-base-100 card shadow-md">
+			<div class="card-body">
+				<h3 class="text-lg font-semibold flex items-center gap-2 mb-4">
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+					</svg>
+					Comments <span id="commentCount" class="text-sm text-gray-500">(0)</span>
+				</h3>
+
+				<!-- Comment Input -->
+				<div id="commentInputSection" class="mb-6">
+					<div id="commentInputArea" class="hidden">
+						<div class="flex gap-3">
+							<div class="avatar w-10 h-10 flex-shrink-0">
+								<div class="rounded-full border border-gray-300">
+									<img id="currentUserAvatar" src="/images/blank_profile.webp" alt="Your avatar" />
+								</div>
+							</div>
+							<div class="flex-1">
+								<textarea id="commentText" class="textarea textarea-bordered w-full resize-none" placeholder="Write a comment..." rows="3" maxlength="1000"></textarea>
+								<div class="flex justify-between items-center mt-2">
+									<span id="commentCharCount" class="text-xs text-gray-500">0/1000</span>
+									<button id="submitComment" class="btn btn-primary btn-sm text-white">Post Comment</button>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div id="loginPrompt" class="hidden text-center py-4">
+						<p class="text-gray-500 mb-2">Please login to comment</p>
+						<a href="/Account/Login" class="btn btn-outline btn-sm">Login</a>
+					</div>
+					<div id="subscribePrompt" class="hidden text-center py-4">
+						<p class="text-gray-500 mb-2">Subscribe to this creator to comment</p>
+						<a href="/Profile/@Model.UId/plans" class="btn btn-primary btn-sm">Support</a>
+					</div>
+				</div>
+
+				<!-- Comments List -->
+				<div id="commentsContainer">
+					<div id="commentsLoading" class="text-center py-4">
+						<span class="loading loading-spinner loading-md"></span>
+					</div>
+					<div id="commentsList" class="space-y-4"></div>
+					<div id="noComments" class="hidden text-center py-8 text-gray-500">
+						No comments yet. Be the first to comment!
+					</div>
+					<div id="commentsLocked" class="hidden text-center py-8">
+						<div class="flex justify-center mb-4">
+							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 text-gray-400">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+							</svg>
+						</div>
+						<p class="text-gray-500 mb-4">Subscribe to view and post comments on this post</p>
+						<a href="/Profile/@Model.UId/plans" class="btn btn-primary btn-sm">Support to unlock</a>
+					</div>
+				</div>
+
+				<!-- Pagination -->
+				<div id="commentsPagination" class="hidden flex justify-center items-center gap-2 mt-6">
+					<button id="prevPage" class="btn btn-sm btn-ghost" disabled>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+						</svg>
+					</button>
+					<span id="pageInfo" class="text-sm text-gray-500">Page 1 of 1</span>
+					<button id="nextPage" class="btn btn-sm btn-ghost" disabled>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+						</svg>
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete Comment Confirmation Modal -->
+<dialog id="deleteCommentModal" class="modal">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg">Delete Comment</h3>
+		<p class="py-4">Are you sure you want to delete this comment? This action cannot be undone.</p>
+		<div class="modal-action">
+			<form method="dialog">
+				<button class="btn btn-ghost">Cancel</button>
+			</form>
+			<button id="confirmDeleteComment" class="btn btn-error">Delete</button>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button>close</button>
+	</form>
+</dialog>
+
+<script src="~/js/app-cache.js"></script>
+<script src="~/js/page-loader.js"></script>
+
+<!-- Like functionality -->
+<script>
+	async function toggleLike(postId) {
+		const likeBtn = document.getElementById('likeBtn');
+		const likeIcon = document.getElementById('likeIcon');
+		const likeCount = document.getElementById('likeCount');
+		
+		if (!likeBtn || !likeIcon || !likeCount) return;
+
+		// Helper function to set like state
+		function setLikeState(isLiked, count) {
+			likeCount.textContent = count;
+			if (isLiked) {
+				likeIcon.classList.remove('fill-none', 'stroke-current');
+				likeIcon.classList.add('fill-current');
+				likeBtn.classList.remove('text-gray-500');
+				likeBtn.classList.add('text-pink-500');
+			} else {
+				likeIcon.classList.remove('fill-current');
+				likeIcon.classList.add('fill-none', 'stroke-current');
+				likeBtn.classList.remove('text-pink-500');
+				likeBtn.classList.add('text-gray-500');
+			}
+		}
+
+		// Disable button to prevent double clicks
+		likeBtn.disabled = true;
+
+		// Capture current state for potential revert
+		const currentCount = parseInt(likeCount.textContent) || 0;
+		const isCurrentlyLiked = likeIcon.classList.contains('fill-current');
+		
+		// Optimistic UI update
+		if (isCurrentlyLiked) {
+			setLikeState(false, Math.max(0, currentCount - 1));
+		} else {
+			setLikeState(true, currentCount + 1);
+			// Add a little bounce animation
+			likeIcon.style.transform = 'scale(1.2)';
+			setTimeout(() => { likeIcon.style.transform = ''; }, 150);
+		}
+
+		try {
+			const response = await fetch(`/Posts/${postId}/like`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			const data = await response.json();
+
+			if (data.success) {
+				// Update with actual server values
+				setLikeState(data.isLiked, data.likeCount);
+			} else {
+				// Revert optimistic update on failure
+				setLikeState(isCurrentlyLiked, currentCount);
+				console.error('Like toggle failed:', data.message);
+			}
+		} catch (error) {
+			console.error('Failed to toggle like:', error);
+			// Revert optimistic update on error
+			setLikeState(isCurrentlyLiked, currentCount);
+		} finally {
+			likeBtn.disabled = false;
+		}
+	}
+</script>
+
+<script src="~/js/editorjs-viewer.js"></script>
+<script>
+	window.addEventListener("load", function () {
+		const container = document.getElementById("postContent");
+		const jsonEl = document.getElementById("postData");
+		if (!jsonEl) return;
+
+		let data;
+		try {
+			data = JSON.parse(jsonEl.textContent);
+		} catch (err) {
+			console.error("Invalid JSON from postData:", err);
+			return;
+		}
+
+		if (typeof window.edjsHTML !== "function") {
+			console.error("❌ edjsHTML library not loaded!");
+			return;
+		}
+
+		const parser = window.edjsHTML();
+		const html = parser.parse(data).join("");
+		container.innerHTML = html;
+	});
+</script>
+
+<script>
+	(function() {
+		const postId = @Model.PostId;
+		const pageSize = 10;
+		let currentPage = 1;
+		let totalPages = 1;
+		let commentToDelete = null;
+		let canComment = false;
+
+		// DOM elements
+		const commentsList = document.getElementById('commentsList');
+		const commentsLoading = document.getElementById('commentsLoading');
+		const noComments = document.getElementById('noComments');
+		const commentsLocked = document.getElementById('commentsLocked');
+		const commentCount = document.getElementById('commentCount');
+		const commentInputArea = document.getElementById('commentInputArea');
+		const loginPrompt = document.getElementById('loginPrompt');
+		const subscribePrompt = document.getElementById('subscribePrompt');
+		const commentText = document.getElementById('commentText');
+		const commentCharCount = document.getElementById('commentCharCount');
+		const submitComment = document.getElementById('submitComment');
+		const pagination = document.getElementById('commentsPagination');
+		const prevPage = document.getElementById('prevPage');
+		const nextPage = document.getElementById('nextPage');
+		const pageInfo = document.getElementById('pageInfo');
+		const deleteModal = document.getElementById('deleteCommentModal');
+		const confirmDelete = document.getElementById('confirmDeleteComment');
+
+		// Initialize comments
+		loadComments(1);
+
+		// Load comments
+		async function loadComments(page) {
+			currentPage = page;
+			commentsLoading.classList.remove('hidden');
+			commentsList.innerHTML = '';
+			noComments.classList.add('hidden');
+			commentsLocked.classList.add('hidden');
+
+			try {
+				const response = await fetch(`/Posts/${postId}/comments?page=${page}&pageSize=${pageSize}`);
+				const data = await response.json();
+
+				commentsLoading.classList.add('hidden');
+				totalPages = data.totalPages;
+				commentCount.textContent = `(${data.totalCount})`;
+
+				// Store canComment state for reply buttons
+				canComment = data.canComment;
+
+				// Check if comments are locked for non-subscribers
+				if (!data.canViewComments) {
+					commentsLocked.classList.remove('hidden');
+					commentInputArea.classList.add('hidden');
+					loginPrompt.classList.add('hidden');
+					subscribePrompt.classList.add('hidden');
+					pagination.classList.add('hidden');
+					return;
+				}
+
+				// Show/hide comment input based on permissions
+				if (!data.isAuthenticated) {
+					loginPrompt.classList.remove('hidden');
+					commentInputArea.classList.add('hidden');
+					subscribePrompt.classList.add('hidden');
+				} else if (data.requiresSubscription) {
+					subscribePrompt.classList.remove('hidden');
+					commentInputArea.classList.add('hidden');
+					loginPrompt.classList.add('hidden');
+				} else if (data.canComment) {
+					commentInputArea.classList.remove('hidden');
+					loginPrompt.classList.add('hidden');
+					subscribePrompt.classList.add('hidden');
+				}
+
+				// Render comments
+				if (data.comments && data.comments.length > 0) {
+					data.comments.forEach(comment => {
+						commentsList.appendChild(createCommentElement(comment));
+					});
+				} else {
+					noComments.classList.remove('hidden');
+				}
+
+				// Update pagination
+				updatePagination();
+
+			} catch (error) {
+				console.error('Failed to load comments:', error);
+				commentsLoading.classList.add('hidden');
+				noComments.textContent = 'Failed to load comments';
+				noComments.classList.remove('hidden');
+			}
+		}
+
+		// Create comment element
+		function createCommentElement(comment, isReply = false) {
+			const div = document.createElement('div');
+			div.className = isReply 
+				? 'flex gap-3 py-2 ml-12 border-l-2 border-base-300 pl-4' 
+				: 'flex gap-3 py-3 border-b border-base-200 last:border-b-0';
+			div.dataset.commentId = comment.commentId;
+
+			const avatarUrl = comment.userProfilePicUrl || '/images/blank_profile.webp';
+			const timeAgo = formatTimeAgo(new Date(comment.createdAt));
+			const avatarSize = isReply ? 'w-8 h-8' : 'w-10 h-10';
+
+			div.innerHTML = `
+				<a href="/Profile/${comment.userId}" class="avatar ${avatarSize} flex-shrink-0">
+					<div class="rounded-full border border-gray-300">
+						<img src="${avatarUrl}" alt="${escapeHtml(comment.userNickname)}" onerror="this.src='/images/blank_profile.webp'" />
+					</div>
+				</a>
+				<div class="flex-1 min-w-0">
+					<div class="flex items-center justify-between gap-2">
+						<div class="flex items-center gap-2 flex-wrap">
+							<a href="/Profile/${comment.userId}" class="font-semibold text-sm hover:underline">${escapeHtml(comment.userNickname)}</a>
+							<span class="text-xs text-gray-500">@@${escapeHtml(comment.userName)}</span>
+							<span class="text-xs text-gray-400">• ${timeAgo}</span>
+						</div>
+						${comment.canDelete ? `
+							<button class="btn btn-ghost btn-xs delete-comment" data-comment-id="${comment.commentId}">
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+									<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+								</svg>
+							</button>
+						` : ''}
+					</div>
+					<p class="text-sm mt-1 break-words whitespace-pre-wrap comment-text"></p>
+					${!isReply && canComment ? `
+						<button class="btn btn-ghost btn-xs reply-btn mt-1" data-comment-id="${comment.commentId}" data-user-nickname="${escapeHtml(comment.userNickname)}">
+							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+							</svg>
+							Reply
+						</button>
+					` : ''}
+					<div class="reply-input-container hidden mt-2"></div>
+					<div class="replies-container"></div>
+				</div>
+			`;
+
+			// Set comment text using textContent for safe plain text display (supports emojis)
+			const commentTextEl = div.querySelector('.comment-text');
+			if (commentTextEl) {
+				commentTextEl.textContent = comment.comment;
+			}
+
+			// Add delete click handler
+			const deleteBtn = div.querySelector('.delete-comment');
+			if (deleteBtn) {
+				deleteBtn.addEventListener('click', () => {
+					commentToDelete = comment.commentId;
+					deleteModal.showModal();
+				});
+			}
+
+			// Add reply button click handler (only for main comments)
+			const replyBtn = div.querySelector('.reply-btn');
+			if (replyBtn) {
+				replyBtn.addEventListener('click', () => {
+					showReplyInput(div, comment.commentId, comment.userNickname);
+				});
+			}
+
+			// Render replies if any
+			if (comment.replies && comment.replies.length > 0) {
+				const repliesContainer = div.querySelector('.replies-container');
+				comment.replies.forEach(reply => {
+					repliesContainer.appendChild(createCommentElement(reply, true));
+				});
+			}
+
+			return div;
+		}
+
+		// Show reply input for a comment
+		function showReplyInput(commentDiv, parentId, userNickname) {
+			// Hide any other open reply inputs
+			document.querySelectorAll('.reply-input-container').forEach(container => {
+				container.classList.add('hidden');
+				container.innerHTML = '';
+			});
+
+			const replyContainer = commentDiv.querySelector('.reply-input-container');
+			replyContainer.classList.remove('hidden');
+			replyContainer.innerHTML = `
+				<div class="flex gap-2 items-start">
+					<div class="flex-1">
+						<textarea class="textarea textarea-bordered textarea-sm w-full resize-none reply-text" placeholder="Reply to @@${escapeHtml(userNickname)}..." rows="2" maxlength="1000"></textarea>
+						<div class="flex justify-between items-center mt-1">
+							<span class="reply-char-count text-xs text-gray-500">0/1000</span>
+							<div class="flex gap-2">
+								<button class="btn btn-ghost btn-xs cancel-reply">Cancel</button>
+								<button class="btn btn-primary btn-xs text-white submit-reply" data-parent-id="${parentId}">Reply</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			`;
+
+			// Focus on textarea
+			const replyText = replyContainer.querySelector('.reply-text');
+			replyText.focus();
+
+			// Character count
+			const charCount = replyContainer.querySelector('.reply-char-count');
+			replyText.addEventListener('input', () => {
+				charCount.textContent = `${replyText.value.length}/1000`;
+			});
+
+			// Cancel button
+			const cancelBtn = replyContainer.querySelector('.cancel-reply');
+			cancelBtn.addEventListener('click', () => {
+				replyContainer.classList.add('hidden');
+				replyContainer.innerHTML = '';
+			});
+
+			// Submit reply button
+			const submitReplyBtn = replyContainer.querySelector('.submit-reply');
+			submitReplyBtn.addEventListener('click', async () => {
+				const text = replyText.value.trim();
+				if (!text) return;
+
+				submitReplyBtn.disabled = true;
+				submitReplyBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+
+				try {
+					const response = await fetch(`/Posts/${postId}/comments`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({ comment: text, parentId: parentId })
+					});
+
+					if (response.ok) {
+						// Reload comments to show the new reply
+						loadComments(currentPage);
+					} else {
+						const error = await response.json();
+						alert(error.message || 'Failed to post reply');
+					}
+				} catch (error) {
+					console.error('Failed to post reply:', error);
+					alert('Failed to post reply');
+				} finally {
+					submitReplyBtn.disabled = false;
+					submitReplyBtn.innerHTML = 'Reply';
+				}
+			});
+		}
+
+		// Format time ago
+		function formatTimeAgo(date) {
+			const now = new Date();
+			const diffMs = now - date;
+			const diffSec = Math.floor(diffMs / 1000);
+			const diffMin = Math.floor(diffSec / 60);
+			const diffHour = Math.floor(diffMin / 60);
+			const diffDay = Math.floor(diffHour / 24);
+
+			if (diffSec < 60) return 'just now';
+			if (diffMin < 60) return `${diffMin}m ago`;
+			if (diffHour < 24) return `${diffHour}h ago`;
+			if (diffDay < 7) return `${diffDay}d ago`;
+			return date.toLocaleDateString();
+		}
+
+		// Escape HTML
+		function escapeHtml(text) {
+			const div = document.createElement('div');
+			div.textContent = text;
+			return div.innerHTML;
+		}
+
+		// Update pagination
+		function updatePagination() {
+			if (totalPages <= 1) {
+				pagination.classList.add('hidden');
+				return;
+			}
+
+			pagination.classList.remove('hidden');
+			pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+			prevPage.disabled = currentPage <= 1;
+			nextPage.disabled = currentPage >= totalPages;
+		}
+
+		// Character count
+		if (commentText) {
+			commentText.addEventListener('input', () => {
+				const len = commentText.value.length;
+				commentCharCount.textContent = `${len}/1000`;
+			});
+		}
+
+		// Submit comment
+		if (submitComment) {
+			submitComment.addEventListener('click', async () => {
+				const text = commentText.value.trim();
+				if (!text) return;
+
+				submitComment.disabled = true;
+				submitComment.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+
+				try {
+					const response = await fetch(`/Posts/${postId}/comments`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({ comment: text })
+					});
+
+					if (response.ok) {
+						const newComment = await response.json();
+						commentText.value = '';
+						commentCharCount.textContent = '0/1000';
+						// Reload comments to show the new one
+						loadComments(1);
+					} else {
+						const error = await response.json();
+						alert(error.message || 'Failed to post comment');
+					}
+				} catch (error) {
+					console.error('Failed to post comment:', error);
+					alert('Failed to post comment');
+				} finally {
+					submitComment.disabled = false;
+					submitComment.innerHTML = 'Post Comment';
+				}
+			});
+		}
+
+		// Delete comment
+		if (confirmDelete) {
+			confirmDelete.addEventListener('click', async () => {
+				if (!commentToDelete) return;
+
+				confirmDelete.disabled = true;
+				confirmDelete.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+
+				try {
+					const response = await fetch(`/Posts/${postId}/comments/${commentToDelete}`, {
+						method: 'DELETE'
+					});
+
+					if (response.ok) {
+						deleteModal.close();
+						loadComments(currentPage);
+					} else {
+						const error = await response.json();
+						alert(error.message || 'Failed to delete comment');
+					}
+				} catch (error) {
+					console.error('Failed to delete comment:', error);
+					alert('Failed to delete comment');
+				} finally {
+					confirmDelete.disabled = false;
+					confirmDelete.innerHTML = 'Delete';
+					commentToDelete = null;
+				}
+			});
+		}
+
+		// Pagination buttons
+		if (prevPage) {
+			prevPage.addEventListener('click', () => {
+				if (currentPage > 1) loadComments(currentPage - 1);
+			});
+		}
+
+		if (nextPage) {
+			nextPage.addEventListener('click', () => {
+				if (currentPage < totalPages) loadComments(currentPage + 1);
+			});
+		}
+	})();
+</script>

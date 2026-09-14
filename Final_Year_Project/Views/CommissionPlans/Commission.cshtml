@@ -1,0 +1,558 @@
+﻿@using Final_Year_Project.Enums
+@inject Final_Year_Project.Services.EnumService EnumService
+@model Final_Year_Project.Models.CommissionPlans.CommissionPlanRequestVM
+@{
+	ViewData["Title"] = "Commission";
+	var _userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+	int uid = int.Parse(_userId ?? "0");
+}
+
+<div class="min-h-screen bg-base-200 flex justify-center">
+	<div class="max-w-6xl w-full mt-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+		<!-- Left Side: Commission Plan Card -->
+		<div class="lg:col-span-2">
+			<div class="bg-base-100 card shadow-md">
+				<div class="card-body p-0">
+					<figure class="h-60 overflow-hidden">
+						@if (!string.IsNullOrEmpty(Model.Plan.ImageUrl))
+						{
+							<img src="@Model.Plan.ImageUrl" alt="@Model.Plan.Title" loading="lazy" class="w-full h-full object-cover" />
+						}
+						else
+						{
+							<img src="/images/no_image.jpg" alt="@Model.Plan.Title" loading="lazy" class=" object-cover" />
+						}
+					</figure>
+					<div class="pt-8 px-8">
+						<p class="flex items-center justify-between text-lg font-semibold">
+							<span class="flex items-center gap-2">
+								@Model.Plan.Title
+								@if (Model.Plan.Status == commissionPlanStatus.@private)
+								{
+									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+										 class="bi bi-lock-fill text-gray-500 flex-shrink-0" viewBox="0 0 16 16">
+										<path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4m0 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3" />
+									</svg>
+								}
+							</span>
+							@if (Model.Plan.IsOwner)
+							{
+								<a href="/CommissionPlans/@Model.Plan.CId/edit" class="text-sm hover:underline">Edit plan</a>
+							}
+						</p>
+						<p class="text-sm h-18 whitespace-pre-line">@Html.Raw(Html.Encode(Model.Plan.Description).Replace("\n", "<br>"))</p>
+						<div class="badge badge-soft badge-primary text-primary">@EnumService.GetEnumDisplayName(Model.Plan.Category)</div>
+					</div>
+					<div class="divider"></div>
+					<div class="px-8 pb-8">
+						@if (Model.Plan.Status == commissionPlanStatus.@private)
+						{
+							<div class="flex flex-col items-center mt-10 space-y-3">
+								<p class="text-sm">This commission is closed.</p>
+								@if (Model.Plan.IsOwner)
+								{
+									<a href="/CommissionPlans/@Model.Plan.CId/edit" class="btn btn-primary text-white w-50">
+										Edit plan
+									</a>
+								}
+							</div>
+						}
+						else if (Model.Plan.Status == commissionPlanStatus.available)
+						{
+							@if (Model.Plan.IsOwner)
+							{
+								<form>
+									<fieldset disabled class="opacity-60 select-none">
+										<div class="w-full text-gray-800 text-lg font-semibold label">
+											Send Request
+										</div>
+										<div class="pt-5">
+											<label class="block font-semibold text-gray-800 mb-1">Request details<span class="text-error">*</span></label>
+											<div class="relative">
+												<textarea rows="15" column="40" class="w-full border border-gray-300 rounded-md px-4 pr-18 py-2 focus:border-gray-500 focus:outline-none focus:ring-0 resize-none"></textarea>
+												<div class="absolute bottom-2 right-3 text-sm text-gray-500 pointer-events-none">
+													<span>0</span><span class="ml-1">/ 1000</span>
+												</div>
+											</div>
+										</div>
+										<div class="pt-5">
+											<label class="block font-semibold text-gray-800 mb-2">Tags<span class="text-error">*</span></label>
+											<div class="space-y-2 opacity-50">
+												<input class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="Search tags..." autocomplete="off" disabled />
+												<div class="flex flex-wrap gap-2 pt-2"></div>
+												<div class="text-xs text-gray-500 mt-1">Selected: 0 / 10</div>
+											</div>
+										</div>
+										<div class="pt-5">
+											<label class="block font-semibold text-gray-800 mb-1">Amount (RM)</label>
+											<p class="w-full text-lg font-semibold text-gray-700">
+												@Model.Plan.TargetPrice.ToString("F2")
+											</p>
+										</div>
+
+										<div class="flex flex-col items-center mt-10 space-y-3">
+											<button class="btn btn-disabled w-50" disabled>
+												Payment
+											</button>
+										</div>
+									</fieldset>
+								</form>
+							}
+							else if (User.Identity!.Name != null && uid != Model.Plan.UId)
+							{
+								@using (Html.BeginForm("SubmitRequest", "CommissionPlans", FormMethod.Post, new { enctype = "multipart/form-data" }))
+								{
+									@Html.AntiForgeryToken()
+
+									@Html.HiddenFor(m => m.Plan.CId)
+									@Html.HiddenFor(m => m.Plan.UId)
+									@Html.HiddenFor(m => m.Plan.TargetPrice)
+
+									<fieldset>
+										<div class="w-full text-gray-800 text-lg font-semibold label">
+											Send Request
+										</div>
+										<div class="pt-5">
+											<label class="block font-semibold text-gray-800 mb-1">Request details<span class="text-error">*</span></label>
+											<div class="relative">
+												@Html.TextAreaFor(m => m.Request.Description, 15, 40, new { @class = "w-full border border-gray-300 rounded-md px-4 pr-18 py-2 focus:border-gray-500 focus:outline-none focus:ring-0 resize-none", maxlength = "1000", id = "descInput" })
+												<div id="descCountContainer" class="absolute bottom-2 right-3 text-sm text-gray-500 pointer-events-none">
+													<span id="descCount">0</span><span class="ml-1">/ 1000</span>
+												</div>
+											</div>
+										</div>
+										<div class="pt-5">
+											<label class="block font-semibold text-gray-800 mb-2">Tags<span class="text-error">*</span></label>
+											<div class="space-y-2">
+												<!-- Auto-suggested tags from description -->
+												<div id="autoSuggestionBox" class="flex flex-wrap gap-2 pb-2"></div>
+												<input id="tagSearchInput" name="TagSearchInput" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition" placeholder="Search tags..." autocomplete="off" />
+												<div id="tagSuggestions" class="bg-white border border-gray-200 rounded-lg max-h-48 overflow-y-auto hidden z-50 shadow-lg"></div>
+												<input type="hidden" id="SelectedTagIds" name="SelectedTagIds" value="" />
+												<div id="selectedTags" class="flex flex-wrap gap-2 pt-2"></div>
+												<div class="text-xs text-gray-500 mt-1">Selected: <span id="tagCount">0</span> / 10</div>
+											</div>
+										</div>
+										<div class="pt-5">
+											<label class="block font-semibold text-gray-800 mb-1">Amount (RM)</label>
+											<p class="w-full text-lg font-semibold text-gray-700">
+												@Model.Plan.TargetPrice.ToString("F2")
+											</p>
+										</div>
+
+										<div class="flex flex-col items-center mt-10 space-y-3">
+											<button id="submitBtn" type="submit" class="btn btn-primary btn-disabled w-50" disabled>
+												Payment
+											</button>
+										</div>
+									</fieldset>
+								}
+
+							}
+							else
+							{
+								<div class="flex flex-col items-center mt-10 space-y-3">
+									<p class="text-sm">Request artwork required user login.</p>
+									<a href="/Account/Login" class="btn btn-primary text-white w-50">
+										Login
+									</a>
+								</div>
+							}
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Right Side: Artist Info & Guidelines Card -->
+		<div class="lg:col-span-1">
+			<!-- Artist Info Card -->
+			<div class="bg-base-100 card shadow-md mb-6">
+				<div class="card-body">
+					<h3 class="card-title text-lg mb-4">About the Artist</h3>
+
+					<!-- Artist Profile Section -->
+					<div class="flex flex-col items-center text-center space-y-3 pb-4 border-b">
+						<div class="avatar w-20 h-20">
+							<div class="rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+								@if (!string.IsNullOrEmpty(Model.Plan.ArtistProfilePic))
+								{
+									<img src="@Model.Plan.ArtistProfilePic" alt="@Model.Plan.ArtistName" />
+								}
+								else
+								{
+									<img src="/images/blank_profile.webp" alt="@Model.Plan.ArtistName" />
+								}
+							</div>
+						</div>
+						<a href="/Profile/@Model.Plan.UId" class="text-lg font-semibold hover:underline text-primary">
+							@Model.Plan.ArtistName
+						</a>
+					</div>
+
+					<!-- Action Buttons -->
+					<div class="flex flex-col gap-2 pt-4">
+						@if (!Model.Plan.IsOwner)
+						{
+							<button id="followBtn" type="button" class="btn btn-outline btn-sm" onclick="toggleFollow(@Model.Plan.UId)">
+								<span id="followBtnText">Follow</span>
+							</button>
+						}
+						<a href="/Profile/@Model.Plan.UId/commissions" class="btn btn-outline btn-sm">
+							All Commission Plans
+						</a>
+					</div>
+				</div>
+			</div>
+
+			<!-- Guidelines Card -->
+			<div class="bg-base-100 card shadow-md">
+				<div class="card-body">
+					<h3 class="card-title text-lg mb-1">Commission Guidelines</h3>
+					<a href="/CommissionPlans/guideline" target="_blank" rel="noopener noreferrer" class="text-md text-primary hover:underline mb-4 block font-bold">How request works?</a>
+					<!-- Do's -->
+					<div class="mb-4">
+						<h4 class="font-semibold text-green-700 flex items-center gap-2 mb-2">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 1 1-.708-.708L9.293 8 7.146 5.854a.5.5 0 1 1 .708-.708l3 3z" />
+								<path fill-rule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+							</svg>
+							Do's
+						</h4>
+						<ul class="text-sm space-y-1 ml-4">
+							<li class="flex gap-2">
+								<span class="text-green-600">✓</span>
+								<span>Convey your passions and what you would like to see in an honest, concise way.</span>
+							</li>
+							<li class="flex gap-2">
+								<span class="text-green-600">✓</span>
+								<span>Include tags to make it easier for creators to frame the request.</span>
+							</li>
+							<li class="flex gap-2">
+								<span class="text-green-600">✓</span>
+								<span>Be respectful and communicate clearly</span>
+							</li>
+							<li class="flex gap-2">
+								<span class="text-green-600">✓</span>
+								<span>Follow the artist's style and preferences</span>
+							</li>
+						</ul>
+					</div>
+
+					<!-- Don'ts -->
+					<div>
+						<h4 class="font-semibold text-red-700 flex items-center gap-2 mb-2">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+								<path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+							</svg>
+							Don'ts
+						</h4>
+						<ul class="text-sm space-y-1 ml-4">
+							<li class="flex gap-2">
+								<span class="text-red-600">✗</span>
+								<span>Use vague or ambiguous descriptions</span>
+							</li>
+							<li class="flex gap-2">
+								<span class="text-red-600">✗</span>
+								<span>Request rush deliveries without agreement</span>
+							</li>
+							<li class="flex gap-2">
+								<span class="text-red-600">✗</span>
+								<span>Be disrespectful or demanding</span>
+							</li>
+							<li class="flex gap-2">
+								<span class="text-red-600">✗</span>
+								<span>Exceed scope without adjusting payment</span>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	const descInput = document.getElementById("descInput");
+	const descCount = document.getElementById("descCount");
+	const descCountContainer = document.getElementById("descCountContainer");
+	const submitBtn = document.getElementById("submitBtn");
+	const descMaxLen = 1000;
+
+	if (descInput) descInput.addEventListener("input", updateDescCount);
+
+	function updateDescCount() {
+			const currentLen = descInput.value.length;
+			descCount.textContent = currentLen;
+			descCountContainer.classList.toggle("text-red-500", currentLen > descMaxLen);
+			descCountContainer.classList.toggle("text-gray-500", currentLen <= descMaxLen);
+				checkInputs();
+	}
+
+	function checkInputs() {
+		if (!submitBtn) return;
+		const hiddenInput = document.getElementById('SelectedTagIds');
+		const descFilled = descInput.value.trim().length > 0;
+		const tagsFilled = hiddenInput && hiddenInput.value.trim().length > 0;
+		
+		if (descFilled && tagsFilled) {
+			submitBtn.disabled = false;
+			submitBtn.classList.remove("btn-disabled");
+			submitBtn.classList.add("btn-primary", "text-white");
+		} else {
+			submitBtn.disabled = true;
+			submitBtn.classList.remove("btn-primary", "text-white");
+			submitBtn.classList.add("btn-disabled");
+		}
+	}
+
+	if (descInput) updateDescCount();
+	checkInputs();
+
+	// Follow functionality
+	async function toggleFollow(artistId) {
+		const followBtn = document.getElementById('followBtn');
+		const followBtnText = document.getElementById('followBtnText');
+
+		if (!followBtn) return;
+
+		try {
+			const response = await fetch(`/Profile/ToggleFollow`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ artistId })
+			});
+
+			const data = await response.json();
+
+			if (data.success) {
+				if (data.isFollowing) {
+					followBtn.classList.add('btn-primary');
+					followBtn.classList.remove('btn-outline');
+					followBtnText.textContent = 'Following';
+				} else {
+					followBtn.classList.remove('btn-primary');
+					followBtn.classList.add('btn-outline');
+					followBtnText.textContent = 'Follow';
+				}
+			} else {
+				// redirect to login if not authenticated
+				if (data.message && data.message.toLowerCase().includes('authenticated')) {
+					window.location.href = '/Account/Login';
+					return;
+				}
+				alert(data.message || 'Error updating follow status');
+			}
+		} catch (error) {
+			console.error('Error:', error);
+			alert('An error occurred. Please try again.');
+		}
+	}
+
+	// Check follow status on page load
+	document.addEventListener('DOMContentLoaded', async function() {
+		const artistId = @Model.Plan.UId;
+		const followBtn = document.getElementById('followBtn');
+		const followBtnText = document.getElementById('followBtnText');
+
+		if (!followBtn) return;
+
+		try {
+			const response = await fetch(`/Profile/IsFollowing?artistId=${artistId}`);
+			const data = await response.json();
+
+			if (data.isFollowing) {
+				followBtn.classList.add('btn-primary');
+				followBtn.classList.remove('btn-outline');
+				followBtnText.textContent = 'Following';
+			}
+		} catch (error) {
+			console.error('Error checking follow status:', error);
+		}
+	});
+
+	// Tag selector (typeahead + chips) with Pixiv-style design
+	(function() {
+		const input = document.getElementById('tagSearchInput');
+		const autoSuggestionBox = document.getElementById('autoSuggestionBox');
+		const suggestions = document.getElementById('tagSuggestions');
+		const selectedContainer = document.getElementById('selectedTags');
+		const hiddenInput = document.getElementById('SelectedTagIds');
+		const tagCount = document.getElementById('tagCount');
+
+		if (!input || !suggestions || !selectedContainer || !hiddenInput) return;
+
+		let timer = null;
+		let selected = [];
+
+		function debounce(fn, delay) {
+			return function(...args) {
+				if (timer) clearTimeout(timer);
+				timer = setTimeout(() => fn(...args), delay);
+			}
+		}
+
+		async function fetchTags(q) {
+			try {
+				const res = await fetch(`/Tags/List?q=${encodeURIComponent(q || '')}`);
+				return await res.json();
+			} catch (err) {
+				console.error('Unable to fetch tags', err);
+				return [];
+			}
+		}
+
+		// Fetch suggested tags based on description text (calls new endpoint)
+		async function fetchSuggestedTagsFromDescription(desc) {
+			if (!desc || desc.trim().length < 3) return [];
+			try {
+				const res = await fetch('/Tags/Suggest', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ Description: desc, Max: 8 })
+				});
+				if (!res.ok) return [];
+				return await res.json();
+			} catch (err) {
+				console.error('Unable to fetch suggested tags', err);
+				return [];
+			}
+		}
+
+		function renderAutoSuggestions(tags) {
+			autoSuggestionBox.innerHTML = '';
+			if (!tags || tags.length === 0) return;
+			// show up to 8 suggestions, skip already selected
+			const filtered = tags.filter(tag => {
+				const id = tag.tagId || tag.TagId || tag.TagID || tag.Tagid || tag.id;
+				return !selected.find(s => s.id == id);
+			}).slice(0, 8);
+			filtered.forEach(tag => {
+				const id = tag.tagId || tag.TagId || tag.TagID || tag.Tagid || tag.id;
+				const name = tag.tagName || tag.TagName || tag.name || '';
+				const chip = document.createElement('div');
+				chip.className = 'px-3 py-1.5 rounded-full bg-gray-100 text-gray-800 flex items-center gap-2 text-sm border border-gray-200 cursor-pointer hover:bg-gray-200';
+				chip.textContent = name;
+				chip.title = 'Click to add tag';
+				chip.addEventListener('click', (e) => {
+					e.preventDefault();
+					selectTag({ tagId: id, tagName: name });
+				});
+				autoSuggestionBox.appendChild(chip);
+			});
+		}
+
+		function renderSuggestions(tags) {
+			suggestions.innerHTML = '';
+			if (!tags || tags.length === 0) {
+				suggestions.classList.add('hidden');
+				return;
+			}
+			const filtered = tags.filter(tag => {
+				const id = tag.tagId || tag.TagId;
+				return !selected.find(s => s.id == id);
+			});
+			
+			if (filtered.length === 0) {
+				suggestions.classList.add('hidden');
+				return;
+			}
+
+			filtered.forEach(tag => {
+				const div = document.createElement('div');
+				div.className = 'px-4 py-2.5 cursor-pointer hover:bg-blue-50 border-b border-gray-100 transition text-sm';
+				div.textContent = tag.tagName || tag.TagName || '';
+				div.dataset.id = tag.tagId || tag.TagId || '';
+				div.addEventListener('click', () => selectTag(tag));
+				suggestions.appendChild(div);
+			});
+			suggestions.classList.remove('hidden');
+		}
+
+		function updateSelectedUI() {
+			selectedContainer.innerHTML = '';
+			selected.forEach(t => {
+				const chip = document.createElement('div');
+				chip.className = 'px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 flex items-center gap-2 text-sm border border-blue-200';
+				chip.textContent = t.name;
+				const btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'ml-1 text-blue-600 hover:text-blue-900 font-bold';
+				btn.textContent = '✕';
+				btn.addEventListener('click', (e) => {
+					e.preventDefault();
+					removeTag(t.id);
+				});
+				chip.appendChild(btn);
+				selectedContainer.appendChild(chip);
+			});
+			hiddenInput.value = selected.map(s => s.id).join(',');
+			tagCount.textContent = `${selected.length}`;
+			checkInputs();
+		}
+
+		function selectTag(tag) {
+			const id = tag.tagId || tag.TagId;
+			const name = tag.tagName || tag.TagName || '';
+			if (!id) return;
+			if (selected.find(s => s.id == id)) return; // dedupe
+			if (selected.length >= 10) return; // max
+			selected.push({ id, name });
+			updateSelectedUI();
+			suggestions.classList.add('hidden');
+			input.value = '';
+			renderSuggestions([]);
+		}
+
+		function removeTag(id) {
+			selected = selected.filter(s => s.id != id);
+			updateSelectedUI();
+		}
+
+        input.addEventListener('input', debounce(async function(e) {
+			const val = e.target.value.trim();
+			const tags = await fetchTags(val);
+			renderSuggestions(tags.slice(0, 30));
+		}, 250));
+
+		// Watch description input and propose tags extracted from description
+		const descInputLocal = document.getElementById('descInput');
+		if (descInputLocal) {
+			const suggestDebounced = debounce(async function(e) {
+				const val = e.target.value.trim();
+				const suggested = await fetchSuggestedTagsFromDescription(val);
+				renderAutoSuggestions(suggested);
+			}, 700);
+
+			descInputLocal.addEventListener('input', suggestDebounced);
+		}
+
+		input.addEventListener('keydown', function(e) {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				const first = suggestions.querySelector('div');
+				if (first) {
+					const id = first.dataset.id;
+					const name = first.textContent;
+					selectTag({ tagId: id, tagName: name });
+				}
+			}
+		});
+
+		// Click outside to hide suggestions
+		document.addEventListener('click', function(e) {
+			if (!suggestions.contains(e.target) && e.target !== input) {
+				suggestions.classList.add('hidden');
+			}
+		});
+
+		// Show suggestions on focus
+		input.addEventListener('focus', debounce(async function(e) {
+			const val = e.target.value.trim();
+			const tags = await fetchTags(val);
+			renderSuggestions(tags.slice(0, 30));
+		}, 100));
+	})();
+</script>

@@ -1,0 +1,161 @@
+@using System.Security.Claims;
+@using Final_Year_Project.Models.DB;
+
+<!DOCTYPE html>
+<html lang="en" data-theme="FYP-light">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"] - Admin Panel</title>
+	<meta name="current-user-id" content="@Context.User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier) ?? String.Empty" />
+	<link rel="icon" href="~/images/pixoria_icon.png" type="image/x-icon">
+	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+	<link rel="stylesheet" href="~/css/styles.css" asp-append-version="true" />
+	@RenderSection("Head", required: false)
+</head>
+@{
+	var uidValue = Context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+	var profile = "";
+	var nickname = "";
+	if (!string.IsNullOrEmpty(uidValue))
+	{
+		var client = Context.RequestServices.GetRequiredService<Final_Year_Project.Services.SupabaseService>().GetClient();
+		var uid = int.Parse(uidValue);
+
+		var userResponse = await client
+		.From<Users>()
+		.Filter("UId", Supabase.Postgrest.Constants.Operator.Equals, uid)
+		.Get();
+
+		var user = userResponse.Models.FirstOrDefault();
+		profile = user?.ProfilePic ?? "";
+		nickname = user?.Nickname ?? "";
+	}
+}
+<body>
+	<header>
+		<div class="navbar px-6 py-3 bg-gray-800">
+			<div class="navbar-start flex items-center gap-4">
+				<a asp-area="" asp-controller="Home" asp-action="Index">
+					<img src="~/images/pixoria.png" alt="Pixoria Admin" class="h-10 w-auto object-contain" />
+				</a>
+				<span class="badge badge-warning text-sm font-semibold">Admin Panel</span>
+			</div>
+
+			<div class="navbar-center lg:flex gap-6">
+				<div class="flex justify-center gap-4 mx-auto">
+					<a href="/ArtworkFraudDetection/ScanAndMonitor" class="btn btn-ghost rounded-btn text-white hover:bg-gray-700">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+						</svg>
+						Fraud Detection
+					</a>
+
+					<a href="/CustomerService/ChatSession" class="btn btn-ghost rounded-btn text-white hover:bg-gray-700">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+						</svg>
+						Customer Service
+					</a>
+
+					<a href="/ArtworkFraudDetection/Statistics" class="btn btn-ghost rounded-btn text-white hover:bg-gray-700">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+						</svg>
+						Statistics
+					</a>
+				</div>
+			</div>
+
+			<div class="navbar-end flex items-center gap-2">
+				<div class="dropdown dropdown-end">
+					<button tabindex="0" class="flex items-center gap-3 cursor-pointer hover:opacity-70 transition-opacity">
+						<div class="avatar w-10 h-10">
+							<div class="rounded-full border-2 border-yellow-400">
+								@if (!string.IsNullOrEmpty(profile))
+								{
+									<img src="~/uploads/profile_pic/@profile"/>
+								}
+								else
+								{
+									<img src="~/images/blank_profile.webp"/>
+								}
+							</div>
+						</div>
+
+						@if (User.Identity!.IsAuthenticated)
+						{
+							<div class="flex flex-col text-left">
+								<span class="font-semibold text-white">@User.Identity!.Name</span>
+								<span class="text-xs text-yellow-400 font-medium">Administrator</span>
+							</div>
+						}
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+						</svg>
+					</button>
+					<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box shadow w-60">
+						<li class="menu-title"><span>Admin Menu</span></li>
+						<li><a href="/Profile/@User.FindFirstValue(ClaimTypes.NameIdentifier)">Profile</a></li>
+						<li><a href="/Account/setting">Account Setting</a></li>
+						<li class="pt-5"><a href="/Account/Logout">Logout</a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</header>
+	<div>
+		<main>
+			@RenderBody()
+		</main>
+	</div>
+	<footer class="footer footer-center bg-gray-800 text-white p-4">
+		<aside>
+			<p>
+				©Pixoria 2025 - Admin Panel - Final Year Project from Foo Sen Yang and Au Yong Ming Jian -
+				<a asp-area="" asp-controller="Home" asp-action="Privacy" class="link link-hover text-yellow-400">
+					Privacy
+				</a>
+			</p>
+		</aside>
+	</footer>
+
+	<script src="~/lib/jquery/dist/jquery.min.js"></script>
+	<script src="~/js/jquery.unobtrusive-ajax.min.js"></script>
+	<script src="~/js/jquery.validate.min.js"></script>
+	<script src="~/js/jquery.validate.unobtrusive.min.js"></script>
+	<script src="~/js/site.js" asp-append-version="true"></script>
+	<script src="~/js/app.js" asp-append-version="true"></script>
+	<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+	<script>
+		(function () {
+			async function clearProfileCache() {
+				try {
+					if (window.indexedDB) {
+						const req = indexedDB.deleteDatabase('ProfileCache');
+						req.onsuccess = function () { console.debug('[Cache] ProfileCache deleted'); };
+						req.onerror = function () { console.warn('[Cache] Failed to delete ProfileCache'); };
+					}
+				} catch (e) {
+					console.warn('[Cache] clearProfileCache error', e);
+				}
+			}
+
+			try { window.clearProfileCache = clearProfileCache; } catch (e) {  }
+
+			document.addEventListener('click', function (e) {
+				const a = e.target && e.target.closest ? e.target.closest('a[href="/Account/Logout"]') : null;
+				if (!a) return;
+				e.preventDefault();
+				clearProfileCache().finally(function () {
+					window.location.href = a.href;
+				});
+			});
+		})();
+	</script>
+
+
+	@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

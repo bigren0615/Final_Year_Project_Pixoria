@@ -1,0 +1,225 @@
+﻿@using Final_Year_Project.Enums
+@using X.PagedList
+@using X.PagedList.Mvc.Core
+@inject Final_Year_Project.Services.EnumService EnumService
+@model IPagedList<Final_Year_Project.Models.Sales.SellerOrderViewModel>
+
+@{
+    ViewData["Title"] = "My Orders";
+}
+
+<div class="flex min-h-screen bg-gray-50">
+    @await Html.PartialAsync("_SellerCenterSidebar")
+
+    <main class="flex-1 p-8 overflow-y-auto">
+
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">My Orders</h1>
+        </div>
+
+        <form method="get" class="bg-white p-5 rounded-xl shadow mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl shadow-sm border">
+
+                <div class="flex flex-col">
+                    <label class="text-sm font-medium text-gray-600 mb-1">Payment Status</label>
+                    <select name="paymentStatus"
+                            class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm">
+                        <option value="">All</option>
+                        <option value="pending" selected="@(ViewBag.PaymentStatus == "pending")">Pending</option>
+                        <option value="paid" selected="@(ViewBag.PaymentStatus == "paid")">Paid</option>
+                        <option value="refunded" selected="@(ViewBag.PaymentStatus == "refunded")">Refunded</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col">
+                    <label class="text-sm font-medium text-gray-600 mb-1">Order Status</label>
+                    <select name="orderStatus"
+                            class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm">
+                        <option value="">All</option>
+                        <option value="pending" selected="@(ViewBag.OrderStatus == "pending")">Pending</option>
+                        <option value="confirmed" selected="@(ViewBag.OrderStatus == "confirmed")">Confirmed</option>
+                        <option value="processing" selected="@(ViewBag.OrderStatus == "processing")">Processing</option>
+                        <option value="completed" selected="@(ViewBag.OrderStatus == "completed")">Completed</option>
+                        <option value="cancelled" selected="@(ViewBag.OrderStatus == "cancelled")">Cancelled</option>
+                        <option value="refunded" selected="@(ViewBag.OrderStatus == "refunded")">Refunded</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col">
+                    <label class="text-sm font-medium text-gray-600 mb-1">Delivery Status</label>
+                    <select name="deliveryStatus"
+                            class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm">
+                        <option value="">All</option>
+                        <option value="pending" selected="@(ViewBag.DeliveryStatus == "pending")">Pending</option>
+                        <option value="packed" selected="@(ViewBag.DeliveryStatus == "packed")">Packed</option>
+                        <option value="shipped" selected="@(ViewBag.DeliveryStatus == "shipped")">Shipped</option>
+                        <option value="delivered" selected="@(ViewBag.DeliveryStatus == "delivered")">Delivered</option>
+                        <option value="returned" selected="@(ViewBag.DeliveryStatus == "returned")">Returned</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col md:col-span-2">
+                    <label class="text-sm font-medium text-gray-600 mb-1">Search</label>
+                    <input type="text"
+                           name="search"
+                           value="@ViewBag.Search"
+                           placeholder="Search Order ID or Buyer"
+                           class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm" />
+                </div>
+
+                <div class="flex flex-col">
+                    <label class="text-sm font-medium text-gray-600 mb-1">Order Date</label>
+                    <input type="date"
+                           name="filterDate"
+                           value="@ViewBag.FilterDate"
+                           class="border border-gray-300 p-2 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm" />
+                </div>
+
+                <div class="flex md:col-span-3 gap-3 pt-2">
+                    <button type="submit"
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 w-full transition">
+                        Apply Filters
+                    </button>
+
+                    <a href="@Url.Action("MyOrderList", "Sales")"
+                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg shadow hover:bg-gray-300 w-full text-center transition">
+                        Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="p-5 border-b">
+                <h2 class="text-lg font-semibold text-gray-700">Order Records</h2>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Order ID</th>
+                            <th class="px-6 py-3 text-left">Buyer</th>
+                            <th class="px-6 py-3 text-left">Order Date</th>
+                            <th class="px-6 py-3 text-left">Payment Status</th>
+                            <th class="px-6 py-3 text-left">Delivery Status</th>
+                            <th class="px-6 py-3 text-left">Order Status</th>
+                            <th class="px-6 py-3 text-right">Total (RM)</th>
+                            <th class="px-6 py-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach (var o in Model)
+                        {
+                            var payment = EnumService.ToEnum<Final_Year_Project.Enums.orderPaymentStatus>(o.PaymentStatus);
+                            var order = EnumService.ToEnum<Final_Year_Project.Enums.orderStatus>(o.OrderStatus);
+                            var delivery = EnumService.ToEnum<Final_Year_Project.Enums.deliveryStatus>(o.DeliveryStatus);
+
+                            string paymentText = EnumService.GetEnumDisplayName(payment);
+                            string orderText = EnumService.GetEnumDisplayName(order);
+                            string deliveryText = EnumService.GetEnumDisplayName(delivery);
+
+                            string paymentBadgeColor = payment switch
+                            {
+                                orderPaymentStatus.paid => "bg-green-100 text-green-700",
+                                orderPaymentStatus.pending => "bg-yellow-100 text-yellow-700",
+                                orderPaymentStatus.refunded => "bg-blue-100 text-blue-700",
+                                _ => "bg-gray-100 text-gray-700"
+                            };
+
+                            string deliveryBadgeColor = delivery switch
+                            {
+                                deliveryStatus.packed => "bg-indigo-100 text-indigo-700",
+                                deliveryStatus.shipped => "bg-blue-100 text-blue-700",
+                                deliveryStatus.delivered => "bg-green-100 text-green-700",
+                                deliveryStatus.returned => "bg-red-100 text-red-700",
+                                deliveryStatus.pending => "bg-yellow-100 text-yellow-700",
+                                _ => "bg-gray-100 text-gray-700"
+                            };
+
+                            string orderBadgeColor = order switch
+                            {
+                                orderStatus.confirmed => "bg-green-100 text-green-700",
+                                orderStatus.processing => "bg-purple-100 text-purple-700",
+                                orderStatus.completed => "bg-green-100 text-green-700",
+                                orderStatus.cancelled => "bg-red-100 text-red-700",
+                                orderStatus.refunded => "bg-blue-100 text-blue-700",
+                                orderStatus.pending => "bg-yellow-100 text-yellow-700",
+                                _ => "bg-gray-100 text-gray-700"
+                            };
+
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-3 font-semibold text-gray-800">@o.OrderId</td>
+                                <td class="px-6 py-3 text-gray-700">@o.BuyerName</td>
+                                <td class="px-6 py-3 text-gray-600">@o.OrderDate.ToString("yyyy-MM-dd")</td>
+
+                                <td class="px-6 py-3">
+                                    <span class="px-3 py-1 text-xs rounded-full @paymentBadgeColor">
+                                        @paymentText
+                                    </span>
+                                </td>
+
+                                <td class="px-6 py-3">
+                                    <span class="px-3 py-1 text-xs rounded-full @deliveryBadgeColor">
+                                        @deliveryText
+                                    </span>
+                                </td>
+
+                                <td class="px-6 py-3">
+                                    <span class="px-3 py-1 text-xs rounded-full @orderBadgeColor">
+                                        @orderText
+                                    </span>
+                                </td>
+
+
+                                <td class="px-6 py-3 text-right font-semibold text-gray-800">
+                                    @String.Format("{0:N2}", o.TotalAmount)
+                                </td>
+
+                                <td class="px-6 py-3 text-center">
+                                    <a href="@Url.Action("OrderDetails", "Sales", new { oId = o.OrderId })"
+                                       class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @{
+                var options = new PagedListRenderOptions
+                {
+                    UlElementClasses = new[] { "flex", "space-x-2" },
+                    LiElementClasses = new[] { "inline-flex" },
+                    PageClasses = new[]
+                    {
+                        "px-4", "py-2", "rounded-lg",
+                        "border", "border-gray-300",
+                        "text-gray-700",
+                        "hover:bg-pink-500", "hover:text-white",
+                        "transition", "duration-200"
+                    },
+                    LinkToPreviousPageFormat = "« Prev",
+                    LinkToNextPageFormat = "Next »",
+                    LinkToFirstPageFormat = "« First",
+                    LinkToLastPageFormat = "Last »"
+                };
+            }
+            <div class="flex justify-center mt-6">
+                @Html.PagedListPager(
+                    Model,
+                    p => Url.Action("MyOrderList", new {
+                        page = p,
+                        search = ViewBag.Search,
+                        filterDate = ViewBag.FilterDate,
+                        filterStatus = ViewBag.FilterStatus
+                    }),
+                    options
+                )
+
+            </div>
+        </div>
+
+    </main>
+</div>

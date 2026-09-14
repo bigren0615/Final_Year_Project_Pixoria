@@ -1,0 +1,1047 @@
+﻿@using Final_Year_Project.Enums
+@inject Final_Year_Project.Services.EnumService EnumService
+@model Final_Year_Project.Models.Posts.PostsAddEditVM
+@{
+	ViewData["Title"] = "Edit Post";
+}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@editorjs/editorjs@2.26.5/dist/editor.css">
+
+<div class="min-h-screen bg-base-200 flex justify-center">
+	<div class="flex flex-col lg:flex-row gap-6 max-w-6xl w-full mt-10">
+		<div class="flex-1 bg-base-100 card shadow-md p-0">
+			@using (Html.BeginForm("PostsEdit", "Posts", FormMethod.Post, new { enctype = "multipart/form-data", id = "editPostForm" }))
+			{
+				@Html.AntiForgeryToken()
+				<div class="space-y-6">
+					@Html.HiddenFor(m => m.PostId, new { id = "PostId" })
+					<figure class="overflow-hidden">
+						<div id="imagePreviewContainer" class="w-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 h-48 cursor-pointer hover:border-gray-400 transition-colors duration-200 ease-in-out">
+							<span id="imagePlaceholder" class="text-gray-500">
+								<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52"
+									 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+									<path d="M8 4v8M4 8h8"
+										  stroke="currentColor" stroke-width="1.6"
+										  stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+							</span>
+							<img id="imagePreview" src="" alt="Preview" class="hidden w-full h-full object-cover" />
+							<button type="button" id="removeImageBtn"
+									class="cursor-pointer hidden absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-opacity-80 transition">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" fill="none">
+									<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+								</svg>
+							</button>
+							<input type="hidden" id="RemoveCoverImage" name="RemoveCoverImage" value="false" />
+						</div>
+						@Html.TextBoxFor(m => m.CoverImage, new { type = "file", accept = "image/*", @class = "hidden", id = "coverImageInput" })
+					</figure>
+					<div>
+						<div class="relative">
+							@Html.TextBoxFor(m => m.Title, new { @class = "w-full rounded-md px-4 pr-18 py-2 text-2xl font-semibold focus:border-gray-500 focus:outline-none focus:ring-0", maxlength = "50", id = "titleInput", placeholder = "Title" })
+							<div id="titleCountContainer" class="absolute bottom-2 right-3 text-sm text-gray-500 pointer-events-none">
+								<span id="titleCount">0</span><span class="ml-1">/ 50</span>
+							</div>
+						</div>
+						@Html.ValidationMessageFor(m => m.Title, "", new { @class = "text-error text-sm px-4" })
+					</div>
+					<div>
+						<div id="editorjs" class="rounded-lg py-5 min-h-[250px]"></div>
+						@Html.TextBoxFor(m => m.Content, new { @id = "PostContent", type = "hidden" })
+					</div>
+				</div>
+			}
+		</div>
+		<div class="w-full lg:w-64">
+			<div class="card bg-base-100 shadow-md p-4">
+				<p class="font-semibold text-gray-800 mb-1">Publish to</p>
+				<div class="space-y-3 mb-1 text-sm">
+					<label class="flex items-center gap-2">
+						<input form="editPostForm" type="radio" name="PublishTarget" value="all"
+							   class="radio radio-primary"
+							   checked="@(Model.PublishTarget == postPublishTarget.all ? "checked" : null)">
+						<span>All users</span>
+					</label>
+
+					<label class="flex items-center gap-2">
+						<input form="editPostForm" type="radio" name="PublishTarget" value="supporters"
+							   class="radio radio-primary"
+							   checked="@(Model.PublishTarget == postPublishTarget.supporters ? "checked" : null)">
+						<span>Supporters only</span>
+					</label>
+					<div id="supporterOptions"
+						 class="mt-3 bg-base-200 p-3 rounded-xl space-y-2 @(Model.PublishTarget == postPublishTarget.supporters ? "" : "hidden")">
+						<label class="block font-medium text-sm mb-1">Select plan</label>
+						<select name="SelectedPlanId" form="editPostForm" class="select select-bordered w-full max-w-sm">
+							@foreach (var plan in Model.Plans)
+							{
+								<option value="@plan.SPId"
+										selected="@(Model.SelectedPlanId == plan.SPId ? "selected" : null)">
+									RM @plan.Price plan or higher
+								</option>
+							}
+						</select>
+					</div>
+				</div>
+
+				<div class="flex flex-col gap-3">
+					<button type="submit" form="editPostForm" id="addPlanBtn" class="btn btn-primary w-full text-white">
+						@if (Model.Status == postsStatus.@private || Model.Status == postsStatus.draft)
+						{
+							<span>Publish</span>
+						}
+						else if (Model.Status == postsStatus.published)
+						{
+							<span>Update</span>
+						}
+					</button>
+					@if (Model.Status == postsStatus.published)
+					{
+						<form asp-action="PostsVisiToggle" asp-controller="Posts" method="post" class="inline">
+							@Html.AntiForgeryToken()
+							<input type="hidden" name="id" value="@Model.PostId" />
+							<button type="submit" class="btn w-full">
+								Private
+							</button>
+						</form>
+					}
+				</div>
+				<div class="flex flex-col items-center mt-10 space-y-3">
+					<label for="deleteModal" class="text-error text-sm hover:underline hover:text-red-600 cursor-pointer">
+						Delete this post
+					</label>
+					<input type="checkbox" id="deleteModal" class="modal-toggle" />
+					<div class="modal" role="dialog">
+						<div class="modal-box">
+							<h3 class="font-bold text-lg">Confirm Delete?</h3>
+							<p class="py-4">
+								Are you sure you want to delete this post?<br />
+							</p>
+
+							<div class="modal-action justify-center items-center">
+								<label for="deleteModal" class="btn">Cancel</label>
+								<form asp-action="PostsDelete" asp-controller="Posts" method="post" class="inline">
+									@Html.AntiForgeryToken()
+									<input type="hidden" name="id" value="@Model.PostId" />
+									<button type="submit" class="btn bg-red-500 hover:bg-red-600 text-white border-none">
+										Delete
+									</button>
+								</form>
+							</div>
+						</div>
+						<label class="modal-backdrop" for="deleteModal"></label>
+					</div>
+				</div>
+			</div>
+			<div class="card bg-base-100 shadow-md p-4 mt-4">
+				<p class="font-semibold text-gray-800 mb-1">Status</p>
+				<div class="grid grid-cols-2 gap-y-2 text-gray-500 text-sm">
+					<span>Post status</span>
+					<span class="text-gray-600 text-right">@EnumService.GetEnumDisplayName(Model.Status)</span>
+
+					<span>Updated on</span>
+					<span class="text-gray-600 text-right">@Model.UpdatedAt.ToString("MMM dd, yyyy hh:mm tt")</span>
+
+					<span>Published on</span>
+					<span class="text-gray-600 text-right">@Model.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")</span>
+				</div>
+			</div>
+			<div class="card bg-base-100 shadow-md p-4 mt-4">
+				<p class="font-semibold text-gray-800 mb-1">Add/Edit Tags</p>
+				<!-- Tag selector for posts (search + suggestions + selected chips). Limit 10 tags -->
+				<div class="space-y-2">
+					<div class="flex items-center gap-2">
+						<input id="tagSearchInputPost" name="TagSearchInputPost" form="editPostForm" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition" placeholder="Search tags..." autocomplete="off" />
+						<button type="button" id="suggestFromContentBtn" class="btn btn-sm btn-outline" disabled>Suggest</button>
+					</div>
+					<div id="tagSuggestionsFromContent" class="mt-2 flex flex-wrap gap-2"></div>
+					<div id="tagSuggestionsPost" class="bg-white border border-gray-200 rounded-lg max-h-48 overflow-y-auto hidden z-50 shadow-lg"></div>
+					<input type="hidden" id="SelectedTagIdsPost" name="SelectedTagIds" form="editPostForm" value="@Html.Raw(Model.SelectedTagIds)" />
+					<div id="selectedTagsPost" class="flex flex-wrap gap-2 pt-2">
+						@if (Model.SelectedTags != null && Model.SelectedTags.Any())
+						{
+							foreach (var t in Model.SelectedTags)
+							{
+								<div class="px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 flex items-center gap-2 text-sm border border-blue-200">@t <button type="button" data-tagname="@t" class="ml-1 text-blue-600 hover:text-blue-900 font-bold remove-tag-btn">✕</button></div>
+							}
+						}
+					</div>
+					<div class="text-xs text-gray-500 mt-1">Selected: <span id="tagCountPost">@((Model.SelectedTags?.Count ?? 0))</span> / 10</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+@section Scripts {
+	<!-- Load Editor.js core and plugins -->
+	<script src="https://cdn.jsdelivr.net/npm/@@editorjs/editorjs@2.26.5"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@@editorjs/header@2.8.1"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@@editorjs/list@1.8.0"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@@editorjs/link@2.5.0"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@@editorjs/image@2.8.1"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@@editorjs/attaches@latest"></script>
+
+	<script>
+		document.addEventListener("DOMContentLoaded", () => {
+			const Header = window.Header || window.header || window['@@editorjs/header'];
+			const List = window.List || window.list || window['@@editorjs/list'];
+			const LinkTool = window.LinkTool || window.linkTool || window['@@editorjs/link'];
+			const ImageTool = window.ImageTool || window.image || window['@@editorjs/image'];
+			const AttachesTool = window.AttachesTool || window.attaches || window.Attaches;
+
+			console.log('Header:', Header);
+			console.log('List:', List);
+			console.log('LinkTool:', LinkTool);
+			console.log('ImageTool:', ImageTool);
+			console.log('AttachesTool:', AttachesTool);
+
+			if (!Header || !List || !LinkTool || !ImageTool || !AttachesTool) {
+				console.error("One or more Editor.js tools failed to load properly!");
+				return;
+			}
+
+			let existingData = { blocks: [], version: "2.26.5" };
+			const rawContent = document.getElementById("PostContent").value;
+			try {
+				if (rawContent && rawContent.trim() !== "") {
+					existingData = JSON.parse(rawContent);
+				}
+			} catch (err) {
+				console.warn("Invalid JSON content, loading empty editor:", err);
+			}
+
+			let previousFiles = (existingData.blocks || [])
+				.filter(b => b.type === "image" || b.type === "attaches")
+				.map(b => b.data.file?.url)
+				.filter(Boolean);
+
+			let previousData = JSON.stringify(existingData);
+
+			const editor = new EditorJS({
+				holder: 'editorjs',
+				data: existingData,
+			onChange: async () => {
+				const savedData = await editor.save();
+				const newData = JSON.stringify(savedData);
+
+				if (newData !== previousData) {
+				previousData = newData;
+
+				const currentFiles = savedData.blocks
+					.filter(b => b.type === "image" || b.type === "attaches")
+					.map(b => b.data.file?.url)
+					.filter(Boolean);
+
+				const deletedFiles = previousFiles.filter(url => !currentFiles.includes(url));
+
+				for (const url of deletedFiles) {
+					const fileName = url.split("/").pop();
+					console.log("Detected deleted file:", fileName);
+					try {
+						const response = await fetch("/Posts/DeleteFile", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ fileName })
+						});
+
+						// expose editor instance when it's ready so Suggest can read content
+						if (editor && typeof editor.isReady !== 'undefined') {
+							editor.isReady.then(() => {
+								try { window.postEditor = editor; } catch (e) { /* no-op */ }
+								console.debug('Editor is ready and exposed as window.postEditor');
+								const btn = document.getElementById('suggestFromContentBtn');
+								if (btn) btn.disabled = false;
+							}).catch(err => console.warn('Editor ready failed', err));
+						} else {
+							// fallback
+							try { window.postEditor = editor; } catch (e) { }
+							const btn = document.getElementById('suggestFromContentBtn');
+							if (btn) btn.disabled = false;
+						}
+
+						// NOTE: do not set global editor here (was accidentally inside delete-file loop)
+
+						if (response.ok) {
+							console.log("Deleted file:", fileName);
+						} else {
+							console.error("DeleteFile failed:", response.status, response.statusText);
+						}
+					} catch (err) {
+						console.error("Failed to delete file:", err);
+					}
+				}
+
+				previousFiles = currentFiles;
+
+				// Auto-trigger suggestions when editor content changes.
+				// Use a small timeout so the rest of the onChange work completes first.
+				setTimeout(() => {
+					try {
+						if (window && typeof window.__debouncedSuggest === 'function') window.__debouncedSuggest();
+					} catch (e) { /* ignore */ }
+				}, 700);
+				}
+			},
+				tools: {
+					header: {
+						class: Header,
+						inlineToolbar: true,
+						config: {
+							levels: [1, 2],
+							defaultLevel: 1
+						}
+					},
+					list: {
+						class: List,
+						inlineToolbar: true
+					},
+					linkTool: {
+						class: LinkTool,
+						config: {
+							endpoint: '/Posts/FetchUrlMetadata'
+						}
+					},
+					image: {
+						class: ImageTool,
+						config: {
+							endpoints: {
+								byFile: '/Posts/UploadImage'
+							},
+							additionalRequestData: {
+								postId: document.getElementById("PostId").value
+							},
+							caption: false,
+						}
+					},
+					attaches: {
+						class: AttachesTool,
+						config: {
+							endpoint: '/Posts/UploadFile',
+							types: 'image/*,audio/*,video/*,application/pdf,application/zip,application/x-zip-compressed,text/plain,image/vnd.adobe.photoshop,application/octet-stream',
+						uploader: {
+								async uploadByFile(file) {
+									const postId = document.getElementById("PostId").value;
+									const formData = new FormData();
+									formData.append("file", file);
+									formData.append("postId", postId);
+
+									const response = await fetch("/Posts/UploadFile", {
+										method: "POST",
+										body: formData
+									});
+
+                                    
+
+									if (!response.ok) throw new Error("Upload failed");
+
+									const result = await response.json();
+
+									return {
+										success: 1,
+										file: {
+											url: result.file.url,
+											name: result.file.name,
+											title: result.file.title,
+											size: result.file.size
+										}
+									};
+								}
+							}
+						}
+					}
+				},
+				placeholder: "Write your post content here..."
+			});
+
+			// Expose the live editor instance so the suggest button can read current content
+			// Previously the editor was only exposed inside a file-delete loop which meant
+			// typing content did not enable suggestions. Expose it as soon as the editor
+			// reports ready and enable the Suggest button.
+			if (editor && typeof editor.isReady !== 'undefined') {
+				editor.isReady.then(() => {
+					try { window.postEditor = editor; } catch (e) { /* no-op */ }
+					const btn = document.getElementById('suggestFromContentBtn');
+					if (btn) btn.disabled = false;
+				}).catch(err => console.warn('Editor ready failed', err));
+			} else {
+				// Fallback: expose editor variable directly if isReady isn't present
+				try { window.postEditor = editor; } catch (e) { }
+				const btn = document.getElementById('suggestFromContentBtn');
+				if (btn) btn.disabled = false;
+			}
+
+			const form = document.querySelector("form");
+			form.addEventListener("submit", async (e) => {
+				e.preventDefault();
+				try {
+					const output = await editor.save();
+					document.getElementById("PostContent").value = JSON.stringify(output);
+					form.submit();
+				} catch (err) {
+					console.error("Editor save failed:", err);
+					alert("Something went wrong while saving your post content.");
+				}
+			});
+		});
+
+		const titleInput = document.getElementById("titleInput");
+		const titleCount = document.getElementById("titleCount");
+		const titleCountContainer = document.getElementById("titleCountContainer");
+		const titleMaxLen = 50;
+
+		const imagePreviewContainer = document.getElementById("imagePreviewContainer");
+		const coverImageInput = document.getElementById("coverImageInput");
+		const imagePreview = document.getElementById("imagePreview");
+		const imagePlaceholder = document.getElementById("imagePlaceholder");
+		const removeImageBtn = document.getElementById("removeImageBtn");
+		const removeCoverInput = document.getElementById("RemoveCoverImage");
+
+		titleInput.addEventListener("input", updateTitleCount);
+
+		imagePreviewContainer.addEventListener("click", () => coverImageInput.click());
+		removeImageBtn.addEventListener("click", handleRemoveImage);
+		coverImageInput.addEventListener("change", handleImageUpload);
+
+		function updateTitleCount() {
+			const currentLen = titleInput.value.length;
+			titleCount.textContent = currentLen;
+			titleCountContainer.classList.toggle("text-red-500", currentLen > titleMaxLen);
+			titleCountContainer.classList.toggle("text-gray-500", currentLen <= titleMaxLen);
+		}
+
+		function handleImageUpload(e) {
+			const file = e.target.files[0];
+			console.log('[handleImageUpload] File selected:', file?.name, file?.type, file?.size);
+			
+			if (!file) {
+				console.log('[handleImageUpload] No file selected');
+				return;
+			}
+			
+			if (!["image/jpeg", "image/png"].includes(file.type)) {
+				console.log('[handleImageUpload] Invalid file type:', file.type);
+				coverImageInput.value = "";
+				return;
+			}
+			
+			console.log('[handleImageUpload] Valid image file, reading as data URL...');
+			const reader = new FileReader();
+			reader.onload = (event) => {
+				console.log('[handleImageUpload] FileReader onload - data URL length:', event.target.result.length);
+				imagePreview.src = event.target.result;
+				imagePreview.classList.remove("hidden");
+				imagePlaceholder.classList.add("hidden");
+				removeImageBtn.classList.remove("hidden");
+				imagePreviewContainer.classList.remove("border-dashed", "bg-gray-50");
+				imagePreviewContainer.classList.add("border-solid", "h-100");
+
+				if (removeCoverInput) removeCoverInput.value = "false";
+				
+				console.log('[handleImageUpload] Image preview updated, triggering auto-suggest...');
+				// Auto-trigger suggestions after image upload
+				// Use setTimeout to ensure the function exists by the time we call it
+				setTimeout(() => {
+					if (typeof window.__debouncedSuggest === 'function') {
+						window.__debouncedSuggest();
+						console.log('[handleImageUpload] Called debouncedSuggest');
+					} else if (typeof debouncedSuggest === 'function') {
+						debouncedSuggest();
+						console.log('[handleImageUpload] Called debouncedSuggest (local scope)');
+					} else {
+						console.warn('[handleImageUpload] debouncedSuggest not available yet');
+					}
+				}, 100);
+			};
+			reader.readAsDataURL(file);
+		}
+
+		function handleRemoveImage(e) {
+			e.stopPropagation();
+			imagePreview.src = "";
+			imagePreview.classList.add("hidden");
+			imagePlaceholder.classList.remove("hidden");
+			removeImageBtn.classList.add("hidden");
+			imagePreviewContainer.classList.add("border-dashed", "bg-gray-50");
+			imagePreviewContainer.classList.remove("border-solid", "h-100");
+			coverImageInput.value = "";
+
+			if (removeCoverInput) removeCoverInput.value = "true";
+		}
+
+		const existingImageUrl = "@Model.CoverImageUrl";
+		console.log('[Page Load] existingImageUrl:', existingImageUrl);
+		if (existingImageUrl && existingImageUrl.trim() !== "") {
+			console.log('[Page Load] Setting existing image:', existingImageUrl);
+			imagePreview.src = existingImageUrl;
+			imagePreview.classList.remove("hidden");
+			imagePlaceholder.classList.add("hidden");
+			removeImageBtn.classList.remove("hidden");
+			imagePreviewContainer.classList.remove("border-dashed", "bg-gray-50");
+			imagePreviewContainer.classList.add("border-solid", "h-100");
+			if (removeCoverInput) removeCoverInput.value = "false";
+			console.log('[Page Load] Image shown, hidden class removed');
+		} else {
+			console.log('[Page Load] No existing image URL, keeping image hidden');
+		}
+
+		const $section = $('#supporterOptions');
+
+		$('input[name="PublishTarget"]').on('change', function () {
+			if ($(this).val() === "@postPublishTarget.supporters") {
+				$section.stop(true, true).slideDown(200);
+			} else {
+				$section.stop(true, true).slideUp(200);
+			}
+		});
+
+		updateTitleCount();
+
+		// Move suggestion-related variables to global scope so they're accessible from image upload handler
+		const suggestBtn = document.getElementById('suggestFromContentBtn');
+		const suggestionsFromContentContainer = document.getElementById('tagSuggestionsFromContent');
+		let selected = []; // Global selected array for suggestions
+
+		// Global helper: render suggestions from content (image or text)
+		function renderSuggestionsFromContent(tags) {
+			suggestionsFromContentContainer.innerHTML = '';
+			if (!tags || tags.length === 0) {
+				console.debug('No tags to render from content');
+				return;
+			}
+			console.debug('Rendering tags from content:', tags.length, 'tags received');
+			const filtered = tags.filter(tag => {
+				const id = tag.tagId || tag.TagId || tag.TagID || tag.id;
+				return !selected.find(s => s.id == id);
+			});
+			console.debug('After filtering out selected:', filtered.length, 'tags remain');
+			if (filtered.length === 0) {
+				console.debug('All tags were already selected');
+				return;
+			}
+			filtered.slice(0, 8).forEach(tag => {
+				const chip = document.createElement('button');
+				chip.type = 'button';
+				chip.className = 'px-3 py-1 rounded-full bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm hover:shadow-sm';
+				chip.textContent = tag.tagName || tag.TagName || '';
+				chip.dataset.id = tag.tagId || tag.TagId || tag.id;
+				chip.addEventListener('click', () => window.postsEditSelectTag({ tagId: chip.dataset.id, tagName: chip.textContent }));
+				suggestionsFromContentContainer.appendChild(chip);
+			});
+			console.debug('Rendered', filtered.slice(0, 8).length, 'tag chips');
+		}
+
+		// Tag selector for posts (search + selected chips)
+		(function() {
+			const input = document.getElementById('tagSearchInputPost');
+			const suggestions = document.getElementById('tagSuggestionsPost');
+			const selectedContainer = document.getElementById('selectedTagsPost');
+			const hiddenInput = document.getElementById('SelectedTagIdsPost');
+			const tagCount = document.getElementById('tagCountPost');
+
+			if (!input || !suggestions || !selectedContainer || !hiddenInput) return;
+
+			let timer = null;
+			const MAX_TAGS = 10;
+
+			async function extractTextFromEditor() {
+				try {
+					const editor = window.postEditor;
+					let data = null;
+
+					// Prefer the live editor instance if available
+					if (editor && typeof editor.save === 'function') {
+						try { data = await editor.save(); } catch (e) { console.debug('editor.save() failed, will attempt fallback to PostContent', e); }
+					}
+
+					// Fallback: read the hidden PostContent field (server-provided or previously saved editor content)
+					if (!data) {
+						const hidden = document.getElementById('PostContent');
+						if (hidden && hidden.value && hidden.value.trim() !== '') {
+							try { data = JSON.parse(hidden.value); } catch (e) { console.debug('Failed to parse PostContent JSON fallback', e); }
+						}
+					}
+
+					if (!data) return '';
+					const blocks = data?.blocks || [];
+					const parts = [];
+					// include title as important context
+					if (titleInput && titleInput.value) parts.push(titleInput.value);
+					for (const b of blocks) {
+						try {
+							if (!b || !b.type) continue;
+							switch (b.type) {
+								case 'paragraph':
+								case 'quote':
+									if (b.data?.text) parts.push(b.data.text);
+									break;
+								case 'header':
+									if (b.data?.text) parts.push(b.data.text);
+									break;
+								case 'list':
+									if (Array.isArray(b.data?.items)) parts.push(b.data.items.join(' '));
+									break;
+								case 'code':
+									if (b.data?.code) parts.push(b.data.code);
+									break;
+								case 'image':
+									if (b.data?.file?.url) parts.push(b.data.file.url.split('/').pop());
+									if (b.data?.caption) parts.push(b.data.caption);
+									break;
+								case 'attaches':
+									if (b.data?.file?.url) parts.push(b.data.file.url.split('/').pop());
+									if (b.data?.title) parts.push(b.data.title);
+									break;
+								default:
+									// ignore other block types
+									break;
+						}
+					} catch (e) { /* ignore block */ }
+					}
+					// join and limit to 1500 chars to keep server work bounded
+					const combined = parts.join(' ').replace(/\s+/g, ' ').trim();
+					console.debug('Extracted editor content for suggestions length=', combined.length);
+					return combined.substring(0, 1500);
+				} catch (err) {
+					console.error('Failed to extract editor content for suggestions', err);
+					return '';
+				}
+			}
+
+		// Extract base64-encoded image data from cover image, inline editor images, or attaches
+		async function getCoverImageBase64() {
+			// First try cover image
+			const previewImg = document.getElementById('imagePreview');
+			console.log('[getCoverImageBase64] Starting image extraction...');
+			
+			if (previewImg) {
+				const isHidden = previewImg.classList.contains('hidden');
+				const hasSrc = !!previewImg.src;
+				
+				if (hasSrc && !isHidden) {
+					try {
+						console.debug('[getCoverImageBase64] Cover image detected');
+						
+						// If it's a data URL, extract base64 directly
+						if (previewImg.src.startsWith('data:')) {
+							const parts = previewImg.src.split(',');
+							if (parts.length >= 2) {
+								const base64 = parts[1];
+								console.log('[getCoverImageBase64] Extracted base64 from cover data URL, length:', base64?.length);
+								return base64;
+							}
+						}
+						
+						// If it's a URL, fetch and convert to base64
+						console.log('[getCoverImageBase64] Fetching cover image from URL:', previewImg.src);
+						const response = await fetch(previewImg.src);
+						if (response.ok) {
+							const blob = await response.blob();
+							return new Promise((resolve) => {
+								const reader = new FileReader();
+								reader.onloadend = () => {
+									const base64 = reader.result.split(',')[1];
+									console.log('[getCoverImageBase64] Converted cover image to base64, length:', base64?.length);
+									resolve(base64);
+								};
+								reader.onerror = () => {
+									console.error('[getCoverImageBase64] FileReader error:', reader.error);
+									resolve(null);
+								};
+								reader.readAsDataURL(blob);
+							});
+						}
+					} catch (e) {
+						console.warn('[getCoverImageBase64] Failed to extract cover image base64:', e);
+					}
+				}
+			}
+			
+			// Fallback: try to get first image from editor content (inline images)
+			try {
+				console.debug('[getCoverImageBase64] Trying to extract image from editor content...');
+				const editor = window.postEditor;
+				if (editor && typeof editor.save === 'function') {
+					const data = await editor.save();
+					const blocks = data?.blocks || [];
+					
+					// Look for image blocks
+					for (const block of blocks) {
+						if (block?.type === 'image' && block?.data?.file?.url) {
+							const imgUrl = block.data.file.url;
+							console.log('[getCoverImageBase64] Found image in editor content:', imgUrl.substring(0, 50));
+							
+							// If it's a data URL, use directly
+							if (imgUrl.startsWith('data:')) {
+								const parts = imgUrl.split(',');
+								if (parts.length >= 2) {
+									console.log('[getCoverImageBase64] Extracted base64 from inline editor image data URL');
+									return parts[1];
+								}
+							}
+							
+							// If it's a URL, fetch and convert
+							try {
+								console.log('[getCoverImageBase64] Fetching inline image from URL');
+								const response = await fetch(imgUrl);
+								if (response.ok) {
+									const blob = await response.blob();
+									return new Promise((resolve) => {
+										const reader = new FileReader();
+										reader.onloadend = () => {
+											const base64 = reader.result.split(',')[1];
+											console.log('[getCoverImageBase64] Converted inline image to base64, length:', base64?.length);
+											resolve(base64);
+										};
+										reader.onerror = () => {
+											console.error('[getCoverImageBase64] FileReader error for inline image:', reader.error);
+											resolve(null);
+										};
+										reader.readAsDataURL(blob);
+									});
+								}
+							} catch (e) {
+								console.warn('[getCoverImageBase64] Failed to fetch inline image:', e);
+								// Continue to next image block
+							}
+						}
+					}
+				}
+			} catch (e) {
+				console.debug('[getCoverImageBase64] Failed to extract from editor content:', e);
+			}
+			
+			console.log('[getCoverImageBase64] No usable image found in cover or editor content');
+			return null;
+		}
+
+		async function fetchSuggestedFromEditor(max = 8) {
+			try {
+				const desc = await extractTextFromEditor();
+				const coverImageBase64 = await getCoverImageBase64();
+				
+				console.debug('Suggest payload:', {
+					textLength: desc?.length,
+					hasImage: !!coverImageBase64,
+					imageLength: coverImageBase64?.length
+				});
+				
+				// Proceed if we have image OR sufficient text (3+ chars)
+				const hasImage = !!coverImageBase64;
+				const hasText = desc && desc.length >= 3;
+				
+				if (!hasImage && !hasText) {
+					console.debug('Skipping suggest: no image and insufficient text');
+					return [];
+				}
+				
+				const suggestPayload = { Max: max };
+				
+				// Add description if available
+				if (desc && desc.length >= 3) {
+					suggestPayload.Description = desc;
+				}
+				
+				// Add cover image base64 if available
+				if (coverImageBase64) {
+					suggestPayload.ImageBase64 = coverImageBase64;
+					console.debug('Including image in suggest request, size:', coverImageBase64.length);
+				}
+				
+				console.debug('Sending suggest request with payload keys:', Object.keys(suggestPayload));
+				
+				const res = await fetch('/Tags/Suggest', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(suggestPayload)
+				});
+				
+				if (!res.ok) {
+					console.error('Tags/Suggest error:', res.status, res.statusText);
+					const errorBody = await res.text();
+					console.error('Error body:', errorBody);
+					return [];
+				}
+				
+				const list = await res.json();
+				console.debug('Tags/Suggest response:', { count: list?.length, items: list?.slice(0, 3) });
+				
+				if (list && list.length > 0) return list;
+
+				// Fallback: if server did not return any suggestions, try using tokenized queries (text-only)
+				if (desc && desc.length >= 3) {
+					console.debug('Tags/Suggest returned empty — trying keyword-based lookups');
+					const tokens = extractTopTokens(desc, 6);
+					const found = [];
+					for (const t of tokens) {
+						try {
+							const listResp = await fetch(`/Tags/List?q=${encodeURIComponent(t)}`);
+							if (!listResp.ok) continue;
+							const r = await listResp.json();
+							if (Array.isArray(r) && r.length > 0) {
+								for (const item of r) {
+									if (!found.find(f => (f.TagId || f.tagId || f.id) == (item.TagId || item.tagId || item.id))) {
+										found.push(item);
+										if (found.length >= max) break;
+									}
+								}
+							}
+						} catch (e) { console.debug('keyword lookup failed for', t, e); }
+						if (found.length >= max) break;
+					}
+					return found.slice(0, max);
+				}
+				return [];
+			} catch (err) {
+				console.error('Unable to fetch suggested tags', err);
+				return [];
+			}
+		}
+
+		function extractTopTokens(text, maxTokens = 6) {
+				if (!text || typeof text !== 'string') return [];
+				const stop = new Set(['the','and','for','with','that','this','from','your','were','have','what','when','how','why','which','but','are','was','were','also','image','file','url','http','https']);
+				const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !stop.has(w));
+				const freq = {};
+				for (const w of words) freq[w] = (freq[w] || 0) + 1;
+				const sorted = Object.keys(freq).sort((a,b) => freq[b] - freq[a]);
+				return sorted.slice(0, maxTokens);
+			}
+
+		const debouncedSuggest = debounce(async () => {
+			// Don't check suggestBtn - it's hidden, but we still want to show suggestions
+			console.log('=== SUGGESTION REQUEST STARTED ===');
+			suggestionsFromContentContainer.innerHTML = '<div class="text-sm text-gray-500 px-2 py-1">Searching suggestions…</div>';
+			try {
+				const results = await fetchSuggestedFromEditor(8);
+				console.log('=== SUGGESTION RESULTS ===', results);
+				if (!results || results.length === 0) {
+					suggestionsFromContentContainer.innerHTML = '<div class="text-sm text-gray-500 px-2 py-1">No suggestions found from content.</div>';
+				} else {
+					renderSuggestionsFromContent(results);
+				}
+			} catch (err) {
+				console.error('=== SUGGESTION ERROR ===', err);
+				suggestionsFromContentContainer.innerHTML = '<div class="text-sm text-red-500 px-2 py-1">Error fetching suggestions.</div>';
+			}
+		}, 600);			// Expose the debounced suggest function globally so Editor onChange (which
+			// is declared earlier) can trigger suggestions even though it runs in a
+			// different lexical scope.
+			try {
+				window.__debouncedSuggest = debouncedSuggest;
+			} catch (e) { /* ignore */ }
+
+			// Hide the suggest button UI since suggestions are automatic now
+			if (suggestBtn) {
+				try { suggestBtn.style.display = 'none'; } catch (e) { /* ignore */ }
+			}
+
+			if (suggestBtn) {
+				suggestBtn.addEventListener('click', async (e) => { e.preventDefault(); debouncedSuggest(); });
+			}
+
+			// Fallback: if editor never loaded or tools failed, enable the suggest button if there's content in PostContent or a title
+			(function ensureSuggestEnabledFallback() {
+				try {
+					const btn = document.getElementById('suggestFromContentBtn');
+					if (!btn) return;
+					if (!btn.disabled) return; // already enabled
+
+					// If we already have postEditor it'll be enabled elsewhere. Otherwise, enable if there is content we can extract
+					if (window.postEditor) { btn.disabled = false; return; }
+
+					const hidden = document.getElementById('PostContent');
+					const title = document.getElementById('titleInput');
+					const hasContent = (hidden && hidden.value && hidden.value.trim().length > 20) || (title && title.value && title.value.trim().length > 2);
+					if (hasContent) {
+						console.debug('Suggest fallback enabling button because hidden content/title exists');
+						btn.disabled = false;
+					} else {
+						// Listen briefly for editor being exposed; if after 5s still no editor enable fallback so user can still try
+						let waited = 0;
+						const interval = setInterval(() => {
+							if (window.postEditor) { btn.disabled = false; clearInterval(interval); return; }
+							waited += 200;
+							if (waited >= 5000) { // final fallback
+								if ((hidden && hidden.value && hidden.value.trim().length > 5) || (title && title.value && title.value.trim().length > 0)) {
+									btn.disabled = false;
+									console.debug('Suggest fallback enabled after wait');
+								}
+								clearInterval(interval);
+							}
+						}, 200);
+					}
+				} catch (e) { console.warn('Failed to run suggest button fallback check', e); }
+			})();
+
+			// Initialize selected from server model values
+			(function initSelected() {
+				const ids = (hiddenInput.value || '').split(',').map(s => s.trim()).filter(s => s !== '');
+				const names = [];
+				// try to extract names from existing chips in DOM
+				selectedContainer.querySelectorAll('div').forEach(div => {
+					const text = div.childNodes[0].textContent?.trim();
+					if (text) names.push(text);
+				});
+
+				for (let i = 0; i < ids.length && i < MAX_TAGS; i++) {
+					selected.push({ id: ids[i], name: names[i] || ids[i] });
+				}
+				hiddenInput.value = selected.map(s => s.id).join(',');
+				tagCount.textContent = `${selected.length}`;
+			})();
+
+			function debounce(fn, delay) {
+				return function(...args) {
+					if (timer) clearTimeout(timer);
+					timer = setTimeout(() => fn(...args), delay);
+				}
+			}
+
+			// Auto-suggest when title changes as well (debounced). This helps when user
+			// edits only the title and expects tag suggestions immediately.
+			if (typeof titleInput !== 'undefined' && titleInput) {
+				titleInput.addEventListener('input', debounce(() => {
+					console.log('=== TITLE CHANGED ===');
+					try {
+						// Ensure the suggest button is enabled so UI reflects readiness
+						const btn = document.getElementById('suggestFromContentBtn');
+						if (btn) btn.disabled = false;
+						// Use global debouncedSuggest which is exposed by the tag selector
+						if (typeof window.__debouncedSuggest === 'function') {
+							console.log('Triggering debouncedSuggest from title change');
+							window.__debouncedSuggest();
+						}
+					} catch (e) { 
+						console.error('Title input error:', e);
+					}
+				}, 800));
+			}
+
+			async function fetchTags(q) {
+				try {
+					const res = await fetch(`/Tags/List?q=${encodeURIComponent(q || '')}`);
+					return await res.json();
+				} catch (err) {
+					console.error('Unable to fetch tags', err);
+					return [];
+				}
+			}
+
+			function renderSuggestions(tags) {
+				suggestions.innerHTML = '';
+				const inputVal = input.value.trim();
+				if ((!tags || tags.length === 0) && inputVal === '') { suggestions.classList.add('hidden'); return; }
+				const filtered = (tags || []).filter(tag => {
+					const id = tag.tagId || tag.TagId || tag.TagID || tag.id;
+					return !selected.find(s => s.id == id);
+				});
+
+				// If there are no filtered suggestions but the user typed something, show option to create new tag
+				if ((filtered.length === 0 || !tags || tags.length === 0) && inputVal.length > 0) {
+					const div = document.createElement('div');
+					div.className = 'px-4 py-2.5 cursor-pointer hover:bg-blue-50 border-b border-gray-100 transition text-sm text-blue-700 font-semibold';
+					div.textContent = `Create new tag "${inputVal}"`;
+					div.addEventListener('click', async () => {
+						if (selected.length >= MAX_TAGS) return;
+						try {
+							const res = await fetch('/Tags/Create', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify({ name: inputVal })
+							});
+							if (!res.ok) {
+								const err = await res.json().catch(() => null);
+								console.error('Create tag failed', err);
+								alert('Unable to create tag');
+								return;
+							}
+							const created = await res.json();
+							selectTag({ tagId: created.TagId || created.tagId || created.id, tagName: created.TagName || created.tagName || inputVal });
+						} catch (err) {
+							console.error('Create tag failed', err);
+							alert('Unable to create tag');
+						}
+					});
+					suggestions.appendChild(div);
+					suggestions.classList.remove('hidden');
+					return;
+				}
+				if (filtered.length === 0) { suggestions.classList.add('hidden'); return; }
+				filtered.slice(0, 30).forEach(tag => {
+					const div = document.createElement('div');
+					div.className = 'px-4 py-2.5 cursor-pointer hover:bg-blue-50 border-b border-gray-100 transition text-sm';
+					div.textContent = tag.tagName || tag.TagName || '';
+					div.dataset.id = tag.tagId || tag.TagId || tag.id;
+					div.addEventListener('click', () => selectTag(tag));
+					suggestions.appendChild(div);
+				});
+				suggestions.classList.remove('hidden');
+			}
+
+			function updateSelectedUI() {
+				selectedContainer.innerHTML = '';
+				selected.forEach(t => {
+					const chip = document.createElement('div');
+					chip.className = 'px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 flex items-center gap-2 text-sm border border-blue-200';
+					chip.textContent = t.name;
+					const btn = document.createElement('button');
+					btn.type = 'button';
+					btn.className = 'ml-1 text-blue-600 hover:text-blue-900 font-bold remove-tag-btn';
+					btn.setAttribute('data-id', t.id);
+					btn.textContent = '✕';
+					btn.addEventListener('click', (e) => { e.preventDefault(); removeTag(t.id); });
+					chip.appendChild(btn);
+					selectedContainer.appendChild(chip);
+				});
+				hiddenInput.value = selected.map(s => s.id).join(',');
+				tagCount.textContent = `${selected.length}`;
+			}
+
+			function selectTag(tag) {
+				const rawId = tag.tagId || tag.TagId || tag.id;
+				const id = rawId ? parseInt(rawId, 10) : NaN;
+				const name = tag.tagName || tag.TagName || tag.name || '';
+				if (!id || Number.isNaN(id)) return;
+				if (selected.find(s => s.id == id)) return;
+				if (selected.length >= MAX_TAGS) return; // don't exceed max
+				selected.push({ id, name });
+				updateSelectedUI();
+				suggestions.classList.add('hidden');
+				input.value = '';
+			}
+
+			// Expose selectTag globally so renderSuggestionsFromContent can use it
+			window.postsEditSelectTag = selectTag;
+
+			function removeTag(id) { selected = selected.filter(s => s.id != id); updateSelectedUI(); }
+
+			input.addEventListener('input', debounce(async function(e) { const val = e.target.value.trim(); const tags = await fetchTags(val); renderSuggestions(tags); }, 250));
+
+			input.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); const first = suggestions.querySelector('div'); if (first) { const id = first.dataset.id; const name = first.textContent; selectTag({ tagId: id, tagName: name }); } } });
+
+			// Click outside to hide suggestions
+			document.addEventListener('click', function(e) { if (!suggestions.contains(e.target) && e.target !== input) { suggestions.classList.add('hidden'); } });
+
+			// Show suggestions on focus
+			input.addEventListener('focus', debounce(async function(e) { const val = e.target.value.trim(); const tags = await fetchTags(val); renderSuggestions(tags); }, 100));
+
+			// handle remove buttons in Razor-rendered chips
+			selectedContainer.addEventListener('click', function(e) {
+				if (e.target && e.target.classList.contains('remove-tag-btn')) {
+					e.preventDefault();
+					const parent = e.target.closest('div');
+					const name = e.target.getAttribute('data-tagname');
+					if (!name) return;
+					// find selected entry by name and remove (IDs may not have been set)
+					selected = selected.filter(s => s.name !== name);
+					updateSelectedUI();
+				}
+			});
+		})();
+	</script>
+	<partial name="_ValidationScriptsPartial" />
+}
+
+
+
+

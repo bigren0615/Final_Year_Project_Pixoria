@@ -1,0 +1,82 @@
+﻿@using Final_Year_Project.Enums
+<div class="mt-10 mx-5">
+	@if (Model.CommissionPlans.Count == 0)
+	{
+		{
+			<section class="card shadow-md bg-base-100">
+				<div class="card-body">
+					<div class="flex flex-col items-center justify-center text-center py-16 rounded-box">
+						<div class="text-gray-500 text-lg">No commission plan.</div>
+						@if (Model.IsOwner)
+						{
+							<a href="/CommissionPlans/add" class="btn btn-primary mt-4 text-white">
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+									 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+									<path d="M8 4v8M4 8h8"
+										  stroke="currentColor" stroke-width="2.5"
+										  stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+								Add Commission Plan Now
+							</a>
+						}
+					</div>
+				</div>
+			</section>
+		}
+	}
+	else
+	{
+		<div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+				@foreach (var commission in Model.CommissionPlans!)
+				{
+					<a href="/CommissionPlans/@commission.CId" class="block group">
+						<div class="card bg-base-100 border border-base-200 shadow-md overflow-hidden">
+							<figure class="h-60 overflow-hidden">
+								@if (!string.IsNullOrEmpty(commission.ImageUrl))
+								{
+									<img src="@commission.ImageUrl" alt="@commission.Title" loading="lazy" class="w-full h-full object-cover" />
+								}
+								else
+								{
+									<img src="/images/no_image.jpg" alt="@commission.Title" loading="lazy" class=" object-cover" />
+								}
+							</figure>
+							<div class="card-body p-4 flex flex-col">
+								<h3 class="card-title text-xl font-semibold line-clamp-1 flex items-center gap-2">
+									<span>@commission.Title</span>
+									@if (commission.Status == commissionPlanStatus.@private)
+									{
+										<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+											 class="bi bi-lock-fill text-gray-500 flex-shrink-0" viewBox="0 0 16 16">
+											<path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4m0 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3" />
+										</svg>
+									}
+								</h3>
+
+								<p class="text-sm text-base-content/70 line-clamp-5 whitespace-pre-line">@Html.Raw(Html.Encode(commission.Description).Replace("\n", "<br>"))</p>
+								<p class="text-gray-500 text-lg font-medium text-left">
+									RM @commission.TargetPrice.ToString("F2")
+								</p>
+							</div>
+						</div>
+					</a>
+				}
+			</div>
+			@if (Model.IsOwner)
+			{
+				<div class="flex justify-center mt-8">
+					<a href="/CommissionPlans/add" class="btn btn-primary text-white">
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+							 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+							<path d="M8 4v8M4 8h8"
+								  stroke="currentColor" stroke-width="2.5"
+								  stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						Add Plan
+					</a>
+				</div>
+			}
+		</div>
+	}
+</div>

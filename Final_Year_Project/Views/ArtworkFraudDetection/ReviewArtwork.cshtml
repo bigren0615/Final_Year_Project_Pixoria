@@ -1,0 +1,351 @@
+@model Final_Year_Project.Models.FraudDetection.ReviewArtworkViewModel
+@{
+    ViewData["Title"] = "Review Flagged Post";
+    Layout = "_AdminLayout";
+}
+
+<div class="min-h-screen bg-pink-50 flex flex-col p-6 space-y-8">
+    <!-- Back Button -->
+    <div>
+        <a href="/ArtworkFraudDetection/ScanAndMonitor" class="btn btn-outline btn-sm">
+            ← Back to Scan & Monitor
+        </a>
+    </div>
+
+    <!-- Main Review Card -->
+    <div class="bg-white rounded-2xl shadow-md p-6">
+        <div class="flex justify-between items-start mb-6">
+            <h2 class="text-2xl font-semibold text-gray-700">Review Flagged Post</h2>
+            <div class="flex gap-2">
+                <span class="badge @(Model.FraudRisk == "high" ? "badge-error" : Model.FraudRisk == "medium" ? "badge-warning" : "badge-info") badge-lg">
+                    @Model.FraudRisk.ToUpper() RISK
+                </span>
+                <span class="badge @(Model.Status == "verified" ? "badge-success" : Model.Status == "rejected" ? "badge-error" : Model.Status == "under_review" ? "badge-warning" : "badge-ghost") badge-lg">
+                    @Model.Status.Replace("_", " ").ToUpper()
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Post Preview -->
+            <div class="space-y-4">
+                <!-- Cover Image -->
+                <div>
+                    <h4 class="font-semibold text-gray-700 mb-2">Cover Image</h4>
+                    <div class="flex justify-center items-center bg-gray-100 rounded-lg p-4">
+                        <img src="@Model.ImageUrl" alt="@Model.PostTitle"
+                             class="rounded-lg shadow-md max-h-96 object-contain">
+                    </div>
+                </div>
+
+                <!-- Content Images from PostFiles -->
+                @if (Model.ContentImageUrls != null && Model.ContentImageUrls.Any())
+                {
+                    <div>
+                        <h4 class="font-semibold text-gray-700 mb-2">Content Images (@Model.ContentImageUrls.Count)</h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach (var imageUrl in Model.ContentImageUrls)
+                            {
+                                <div class="bg-gray-100 rounded-lg p-2">
+                                    <img src="@imageUrl" alt="Content Image" class="w-full h-32 object-cover rounded" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                
+                @if (Model.Matches.Any())
+                {
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-red-700 mb-2">⚠️ Similar Posts Found (Plagiarism Detection)</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            @foreach (var match in Model.Matches)
+                            {
+                                <div class="bg-white rounded-lg p-2 shadow">
+                                    @if (!string.IsNullOrEmpty(match.ImageUrl))
+                                    {
+                                        <img src="@match.ImageUrl" alt="@match.PostTitle" class="w-full h-32 object-cover rounded" />
+                                    }
+                                    <p class="text-sm mt-2"><strong>@match.PostTitle</strong></p>
+                                    <p class="text-xs text-red-600">@match.SimilarityPercentage% Similar</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Post Details + Scan Results -->
+            <div class="space-y-6">
+                <!-- Post Info -->
+                <div class="bg-gray-50 p-4 rounded-lg space-y-3">
+                    <h3 class="font-semibold text-lg text-gray-700 border-b pb-2">Post Information</h3>
+                    <p><span class="font-semibold">Title:</span> @Model.PostTitle</p>
+                    <p><span class="font-semibold">Post ID:</span> @Model.PostId</p>
+                    <div>
+                        <span class="font-semibold">Content:</span>
+                        @if (!string.IsNullOrEmpty(Model.Content))
+                        {
+                            <div id="postContent" class="mt-2 prose max-w-none bg-white p-3 rounded border"></div>
+                            <script id="postData" type="application/json">
+                                @Html.Raw(Model.Content)
+                            </script>
+                        }
+                        else
+                        {
+                            <span class="text-gray-500">No content</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Artist Info -->
+                <div class="bg-gray-50 p-4 rounded-lg space-y-3">
+                    <h3 class="font-semibold text-lg text-gray-700 border-b pb-2">Artist Information</h3>
+                    <div class="flex items-center gap-3">
+                        @if (!string.IsNullOrEmpty(Model.ArtistProfilePic))
+                        {
+                            <img src="@Model.ArtistProfilePic" class="w-12 h-12 rounded-full object-cover" alt="Artist" />
+                        }
+                        else
+                        {
+                            <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                                <span class="text-gray-500 text-xl">?</span>
+                            </div>
+                        }
+                        <div>
+                            <p class="font-semibold">@Model.ArtistName</p>
+                            <p class="text-sm text-gray-500">@Model.ArtistEmail</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detection Results -->
+                <div class="bg-orange-50 p-4 rounded-lg space-y-3">
+                    <h3 class="font-semibold text-lg text-gray-700 border-b pb-2">Detection Results</h3>
+                    <p><span class="font-semibold">Flagged At:</span> @Model.FlaggedAt.ToString("MMMM dd, yyyy HH:mm")</p>
+                    <p><span class="font-semibold">Detection Type:</span> @Model.DetectionType.Replace("_", " ")</p>
+                    <p><span class="font-semibold">Confidence Score:</span> 
+                        <span class="font-bold @(Model.ConfidencePercentage >= 80 ? "text-red-600" : Model.ConfidencePercentage >= 60 ? "text-orange-500" : "text-yellow-500")">
+                            @Model.ConfidencePercentage%
+                        </span>
+                    </p>
+                    
+                    @if (Model.IsAiGenerated)
+                    {
+                        <div class="alert alert-warning">
+                            <span>⚠️ <strong>AI-Generated Content Detected</strong> - @((Model.AiProbability * 100).ToString("F1"))% probability</span>
+                        </div>
+                    }
+                    
+                    @if (Model.IsPlagiarized)
+                    {
+                        <div class="alert alert-error">
+                            <span>⚠️ <strong>Plagiarism Detected</strong> - @((Model.PlagiarismSimilarity * 100).ToString("F1"))% similarity</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(Model.EvidenceDetails))
+                    {
+                        <div>
+                            <p class="font-semibold mb-2">Evidence Details:</p>
+                            <pre class="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-32">@Model.EvidenceDetails</pre>
+                        </div>
+                    }
+                </div>
+
+                <!-- Previous Review Info -->
+                @if (Model.ReviewedAt.HasValue)
+                {
+                    <div class="bg-blue-50 p-4 rounded-lg space-y-3">
+                        <h3 class="font-semibold text-lg text-gray-700 border-b pb-2">Previous Review</h3>
+                        <p><span class="font-semibold">Reviewed By:</span> @Model.ReviewedByName</p>
+                        <p><span class="font-semibold">Review Date:</span> @Model.ReviewedAt.Value.ToString("MMMM dd, yyyy HH:mm")</p>
+                        @if (!string.IsNullOrEmpty(Model.ReviewNotes))
+                        {
+                            <p><span class="font-semibold">Notes:</span> @Model.ReviewNotes</p>
+                        }
+                    </div>
+                }
+
+                <!-- Notification Status -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p>
+                        <span class="font-semibold">Artist Notified:</span>
+                        @if (Model.ArtistNotified)
+                        {
+                            <span class="text-green-600">✓ Yes (@Model.NotifiedAt?.ToString("MMM dd, yyyy HH:mm"))</span>
+                        }
+                        else
+                        {
+                            <span class="text-gray-500">Not yet</span>
+                        }
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Status Section -->
+    <div class="bg-white rounded-2xl shadow-md p-6">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Update Status</h3>
+        
+        <form id="updateStatusForm" class="space-y-4">
+            <input type="hidden" name="FraudId" value="@Model.FraudId" />
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="label">
+                        <span class="label-text font-semibold">New Status</span>
+                    </label>
+                    <select name="Status" id="statusSelect" class="select select-bordered w-full">
+                        @if (Model.Status == "flagged")
+                        {
+                            <option value="flagged" selected>Flagged</option>
+                        }
+                        else
+                        {
+                            <option value="flagged">Flagged</option>
+                        }
+                        @if (Model.Status == "under_review")
+                        {
+                            <option value="under_review" selected>Under Review</option>
+                        }
+                        else
+                        {
+                            <option value="under_review">Under Review</option>
+                        }
+                        @if (Model.Status == "verified")
+                        {
+                            <option value="verified" selected>Verified (Safe)</option>
+                        }
+                        else
+                        {
+                            <option value="verified">Verified (Safe)</option>
+                        }
+                        @if (Model.Status == "rejected")
+                        {
+                            <option value="rejected" selected>Rejected (Fraud)</option>
+                        }
+                        else
+                        {
+                            <option value="rejected">Rejected (Fraud)</option>
+                        }
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="label">
+                        <span class="label-text font-semibold">Notify Artist</span>
+                    </label>
+                    <label class="cursor-pointer label justify-start gap-2">
+                        <input type="checkbox" name="NotifyArtist" id="notifyArtist" checked class="checkbox checkbox-primary" />
+                        <span class="label-text">Send email notification to artist about status change</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div>
+                <label class="label">
+                    <span class="label-text font-semibold">Review Notes</span>
+                </label>
+                <textarea name="ReviewNotes" id="reviewNotes" class="textarea textarea-bordered w-full h-24" 
+                          placeholder="Add any notes about your review decision...">@Model.ReviewNotes</textarea>
+            </div>
+            
+            <div class="flex gap-4 pt-4">
+                <button type="button" onclick="updateStatus('verified')" 
+                        class="btn btn-success flex-1">
+                    ✓ Mark as Verified (Safe)
+                </button>
+                <button type="button" onclick="updateStatus('rejected')" 
+                        class="btn btn-error flex-1">
+                    ✕ Mark as Rejected (Fraud)
+                </button>
+                <button type="button" onclick="updateStatus('under_review')" 
+                        class="btn btn-warning flex-1">
+                    🔍 Mark as Under Review
+                </button>
+            </div>
+        </form>
+
+        <!-- Success/Error Message -->
+        <div id="statusMessage" class="hidden mt-4 p-4 rounded-lg"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/editorjs-viewer.js"></script>
+    <script>
+        // Parse and render EditorJS content
+        window.addEventListener("load", function () {
+            const container = document.getElementById("postContent");
+            const jsonEl = document.getElementById("postData");
+            if (!jsonEl || !container) return;
+
+            let data;
+            try {
+                data = JSON.parse(jsonEl.textContent);
+            } catch (err) {
+                console.error("Invalid JSON from postData:", err);
+                container.innerHTML = '<span class="text-gray-500">Unable to parse content</span>';
+                return;
+            }
+
+            if (typeof window.edjsHTML !== "function") {
+                console.error("edjsHTML library not loaded!");
+                container.innerHTML = '<span class="text-gray-500">Content viewer not available</span>';
+                return;
+            }
+
+            const parser = window.edjsHTML();
+            const html = parser.parse(data).join("");
+            container.innerHTML = html || '<span class="text-gray-500">No content</span>';
+        });
+    </script>
+    <script>
+        async function updateStatus(status) {
+            const fraudId = @Model.FraudId;
+            const notifyArtist = document.getElementById('notifyArtist').checked;
+            const reviewNotes = document.getElementById('reviewNotes').value;
+
+            try {
+                const response = await fetch('/ArtworkFraudDetection/UpdateStatus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        FraudId: fraudId,
+                        Status: status,
+                        ReviewNotes: reviewNotes,
+                        NotifyArtist: notifyArtist
+                    })
+                });
+
+                const data = await response.json();
+                const messageDiv = document.getElementById('statusMessage');
+
+                if (data.success) {
+                    messageDiv.className = 'mt-4 p-4 rounded-lg bg-green-100 text-green-700';
+                    messageDiv.textContent = '✅ Status updated successfully!' + (notifyArtist ? ' Artist has been notified.' : '');
+                    messageDiv.classList.remove('hidden');
+                    
+                    // Update the status dropdown
+                    document.getElementById('statusSelect').value = status;
+                    
+                    // Reload page after 2 seconds
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    messageDiv.className = 'mt-4 p-4 rounded-lg bg-red-100 text-red-700';
+                    messageDiv.textContent = '❌ Failed to update status: ' + (data.error || 'Unknown error');
+                    messageDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                const messageDiv = document.getElementById('statusMessage');
+                messageDiv.className = 'mt-4 p-4 rounded-lg bg-red-100 text-red-700';
+                messageDiv.textContent = '❌ Failed to update status: ' + error.message;
+                messageDiv.classList.remove('hidden');
+            }
+        }
+    </script>
+}

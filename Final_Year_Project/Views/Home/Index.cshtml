@@ -1,0 +1,246 @@
+﻿@using Final_Year_Project.Models.Posts
+@model HomePageVM
+
+@{
+	ViewData["Title"] = "Home";
+}
+
+@{
+	// Track whether we've emitted the page-priority (LCP) image yet
+	var pagePriorityEmitted = false;
+
+	// Pick the most likely LCP candidate to preload (the first cover image visible on the page)
+	string? firstImageToPreload = null;
+	if (User.Identity?.IsAuthenticated == true && Model?.FollowedSubscribedPosts?.Any() == true)
+	{
+		var first = Model.FollowedSubscribedPosts.FirstOrDefault();
+		if (first != null)
+		{
+			firstImageToPreload = !string.IsNullOrEmpty(first.CoverImageUrl) ? first.CoverImageUrl : Url.Content("~/images/no_image.jpg");
+		}
+	}
+
+	if (firstImageToPreload == null && Model?.LatestPosts?.Any() == true)
+	{
+		var first = Model.LatestPosts.FirstOrDefault();
+		if (first != null)
+		{
+			firstImageToPreload = !string.IsNullOrEmpty(first.CoverImageUrl) ? first.CoverImageUrl : Url.Content("~/images/no_image.jpg");
+		}
+	}
+}
+
+@section Head {
+	@* Preload the most-likely LCP image (if any) so the browser can fetch it early and improve LCP timing *@
+	@if (!string.IsNullOrEmpty(firstImageToPreload))
+	{
+		<link rel="preload" as="image" href="@firstImageToPreload" />
+	}
+}
+
+<div class="min-h-screen bg-base-200 py-8">
+	<div class="container mx-auto px-4">
+		<div class="max-w-8xl mx-auto">
+			@if (User.Identity?.IsAuthenticated == true && Model?.FollowedSubscribedPosts?.Any() == true)
+			{
+				<section class="card shadow-md bg-base-100 mb-8">
+					<div class="card-body">
+						<div class="flex justify-between items-center mb-6">
+							<h2 class="card-title font-bold text-2xl mb-6">Followed & Subscribed Posts</h2>
+							<a href="/Posts?filter=both&page=1&search=" class="btn btn-sm btn-outline">View All</a>
+						</div>
+
+						@if (Model.FollowedSubscribedPosts.Any())
+						{
+							<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+								@foreach (var post in Model.FollowedSubscribedPosts)
+								{
+									<a href="/Posts/@post.PostId" class="card bg-base-100 hover:shadow-xl shadow-md transition-shadow overflow-hidden group">
+										<figure class="relative overflow-hidden bg-gray-300 h-48">
+											@{ var isPriority = !pagePriorityEmitted; }
+											@if (!string.IsNullOrEmpty(post.CoverImageUrl))
+											{
+												<img src="@post.CoverImageUrl" alt="@post.Title"
+													 class="w-full h-full object-cover"
+													 loading="@(isPriority ? "eager" : "lazy")"
+													 decoding="@(isPriority ? "sync" : "async")"
+													 fetchpriority="@(isPriority ? "high" : "auto")"
+													 width="640" height="192" />
+											}
+											else
+											{
+												<img src="/images/no_image.jpg" alt="@post.Title"
+													 class="w-full h-full object-cover"
+													 loading="@(isPriority ? "eager" : "lazy")"
+													 decoding="@(isPriority ? "sync" : "async")"
+													 fetchpriority="@(isPriority ? "high" : "auto")"
+													 width="640" height="192" />
+											}
+											@if (isPriority) { pagePriorityEmitted = true; }
+										</figure>
+
+										<div class="card-body p-4">
+											<h3 class="font-bold text-lg line-clamp-2">@post.Title</h3>
+											<p class="text-xs text-gray-600 font-semibold mt-1">
+												@(string.IsNullOrEmpty(post.PlanName) ? "All User" : $"{post.PlanName} - RM {post.Price?.ToString("F2")}")
+											</p>
+
+											<div class="flex items-center gap-3 mt-4 pt-3 border-t">
+												<div class="avatar w-9 h-9 flex-shrink-0">
+													<div class="rounded-full">
+														@if (!string.IsNullOrEmpty(post.ArtistProfilePic))
+														{
+															<img src="@post.ArtistProfilePic" alt="@post.ArtistName"
+																 width="36" height="36" loading="lazy" decoding="async" />
+														}
+														else
+														{
+															<img src="/images/blank_profile.webp" alt="@post.ArtistName"
+																 width="36" height="36" loading="lazy" decoding="async" />
+														}
+													</div>
+												</div>
+												<div class="flex-1 min-w-0">
+													<p class="font-semibold text-sm truncate">@post.ArtistName</p>
+													<p class="text-xs text-gray-500">@post.CreatedAt.ToString("MMM dd")</p>
+												</div>
+											</div>
+										</div>
+									</a>
+								}
+							</div>
+						}
+					</div>
+				</section>
+			}
+
+			<section class="card shadow-md bg-base-100">
+				<div class="card-body">
+					<div class="flex justify-between items-center mb-6">
+						<h2 class="card-title font-bold text-2xl">Latest Posts</h2>
+						<a href="/Posts" class="btn btn-sm btn-outline">View All</a>
+					</div>
+
+					@if (Model?.LatestPosts?.Any() == true)
+					{
+						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+							@foreach (var post in Model.LatestPosts)
+							{
+								<a href="/Posts/@post.PostId" class="card bg-base-100 hover:shadow-xl shadow-md transition-shadow overflow-hidden group">
+									<figure class="relative overflow-hidden bg-gray-300 h-48">
+										@{ var isPriority = !pagePriorityEmitted; }
+										@if (!string.IsNullOrEmpty(post.CoverImageUrl))
+										{
+											<img src="@post.CoverImageUrl" alt="@post.Title"
+												 class="w-full h-full object-cover"
+												 loading="@(isPriority ? "eager" : "lazy")"
+												 decoding="@(isPriority ? "sync" : "async")"
+												 fetchpriority="@(isPriority ? "high" : "auto")"
+												 width="640" height="192" />
+										}
+										else
+										{
+											<img src="/images/no_image.jpg" alt="@post.Title"
+												 class="w-full h-full object-cover"
+												 loading="@(isPriority ? "eager" : "lazy")"
+												 decoding="@(isPriority ? "sync" : "async")"
+												 fetchpriority="@(isPriority ? "high" : "auto")"
+												 width="640" height="192" />
+										}
+										@if (isPriority) { pagePriorityEmitted = true; }
+									</figure>
+
+									<div class="card-body p-4">
+										<h3 class="font-bold text-lg line-clamp-2">@post.Title</h3>
+										<p class="text-xs text-gray-600 font-semibold mt-1">
+											@(string.IsNullOrEmpty(post.PlanName) ? "All User" : $"{post.PlanName} - RM {post.Price?.ToString("F2")}")
+										</p>
+
+										<div class="flex items-center gap-3 mt-4 pt-3 border-t">
+											<div class="avatar w-9 h-9 flex-shrink-0">
+												<div class="rounded-full">
+													@if (!string.IsNullOrEmpty(post.ArtistProfilePic))
+													{
+														<img src="@post.ArtistProfilePic" alt="@post.ArtistName"
+															width="36" height="36" loading="lazy" decoding="async" />
+													}
+													else
+													{
+														<img src="/images/blank_profile.webp" alt="@post.ArtistName"
+															width="36" height="36" loading="lazy" decoding="async" />
+													}
+												</div>
+											</div>
+											<div class="flex-1 min-w-0">
+												<p class="font-semibold text-sm truncate">@post.ArtistName</p>
+												<p class="text-xs text-gray-500">@post.CreatedAt.ToString("MMM dd")</p>
+											</div>
+										</div>
+									</div>
+								</a>
+							}
+						</div>
+					}
+					else
+					{
+						<div class="text-center py-12">
+							<p class="text-gray-500 mb-4">No posts yet</p>
+							<a href="/Posts" class="btn btn-primary">Browse All Posts</a>
+						</div>
+					}
+				</div>
+			</section>
+			<section class="card shadow-md bg-base-100 mt-8">
+				<div class="card-body">
+					<div class="flex justify-between items-center mb-6">
+						<h2 class="card-title font-bold text-2xl">Recommended Physical Products</h2>
+						<a href="/Purchase/PurchasePage" class="btn btn-sm btn-outline">View All</a>
+					</div>
+
+					@if (Model?.RecommendedProducts?.Any() == true)
+					{
+						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+							@foreach (var product in Model.RecommendedProducts)
+							{
+								<a href="/Purchase/ViewArtworkDetails/@product.PId"
+								   class="card bg-base-100 hover:shadow-xl shadow-md transition-shadow group overflow-hidden">
+
+									<figure class="relative overflow-hidden bg-gray-300 h-48">
+										<img src="@product.ImageUrl"
+											 alt="@product.Name"
+											 class="w-full h-full object-cover"
+											 loading="lazy"
+											 decoding="async"
+											 width="640" height="192" />
+									</figure>
+
+									<div class="card-body p-4">
+										<h3 class="font-bold text-lg line-clamp-2">@product.Name</h3>
+										<p class="text-primary font-semibold mt-2">
+											RM @product.Price.ToString("0.00")
+										</p>
+									</div>
+								</a>
+							}
+						</div>
+					}
+					else
+					{
+						<div class="text-center py-12 text-gray-500">
+							No recommended products found.
+						</div>
+					}
+				</div>
+			</section>
+		</div>
+	</div>
+</div>
+
+<style>
+	.line-clamp-2 {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+</style>

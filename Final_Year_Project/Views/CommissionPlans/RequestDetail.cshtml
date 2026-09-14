@@ -1,0 +1,190 @@
+@using Final_Year_Project.Enums
+@inject Final_Year_Project.Services.EnumService EnumService
+@using Final_Year_Project.Models.CommissionPlans
+@model RequestDetailViewModel
+
+@{
+    ViewData["Title"] = "Request Details";
+}
+
+<div class="min-h-screen bg-base-200 p-8">
+    <div class="max-w-5xl mx-auto bg-base-100 shadow-md rounded-lg p-6">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="bg-green-100 text-green-700 px-4 py-2 rounded mb-3">@TempData["SuccessMessage"]</div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="bg-red-100 text-red-700 px-4 py-2 rounded mb-3">@TempData["ErrorMessage"]</div>
+        }
+        <div class="flex justify-between items-start gap-4">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-2xl font-bold">@Model.PlanTitle</h2>
+                    <a href="/CommissionPlans/guideline" target="_blank" rel="noopener noreferrer" class="tooltip tooltip-neutral" data-tip="View request guidelines">
+                        <button class="btn btn-xs btn-circle text-sm">?</button>
+                    </a>
+                </div>
+                <p class="text-sm text-gray-500 mt-1">Requested by <strong>@Model.RequesterName</strong></p>
+                <p class="text-sm text-gray-500">Date: @Model.RequestDate.ToString("MMM dd, yyyy HH:mm")</p>
+                @if (Model.Deadline.HasValue)
+                {
+                    <p class="text-sm text-gray-500">Deadline: <strong>@Model.Deadline.Value.ToString("MMM dd, yyyy")</strong></p>
+                }
+            </div>
+
+            <div class="flex flex-col items-end gap-2">
+                <div class="badge badge-outline">@EnumService.GetEnumDisplayName(Model.Status)</div>
+                <div class="badge badge-outline">@EnumService.GetEnumDisplayName(Model.PaymentStatus)</div>
+            </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-3 gap-6">
+            <div class="col-span-2">
+                <h3 class="font-semibold">Description</h3>
+                <p class="text-sm text-gray-600 mt-2">@Model.RequestDescription</p>
+
+                @if (Model.Tags != null && Model.Tags.Any())
+                {
+                    <div class="mt-4">
+                        <p class="text-sm font-semibold">Tags</p>
+                        <div class="flex flex-wrap gap-2 mt-1">
+                            @foreach (var tag in Model.Tags)
+                            {
+                                <span class="badge badge-primary badge-outline">@tag</span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="mt-6">
+                    <h3 class="font-semibold">Artwork Timeline</h3>
+                    @if (Model.Artworks != null && Model.Artworks.Any())
+                    {
+                        <div class="mt-3 grid grid-cols-3 gap-4">
+                            @foreach (var art in Model.Artworks)
+                            {
+                                <div class="card bg-base-200 p-2 shadow-sm">
+                                    <a href="@art.Url" target="_blank">
+                                        <img src="@art.Url" alt="art-@art.RAId" class="w-full h-40 object-cover rounded-md" />
+                                    </a>
+                                    <div class="mt-2 flex justify-between items-start">
+                                        <div>
+                                            <div class="text-sm font-semibold">@EnumService.GetEnumDisplayName(art.Type)</div>
+                                            <div class="text-xs text-gray-500">@art.CreatedAt.ToString("MMM dd, yyyy HH:mm")</div>
+                                        </div>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(art.Comment))
+                                    {
+                                        <div class="mt-2 text-xs text-gray-700">Comment: @art.Comment</div>
+                                    }
+
+                                    @* If the current user is requester and the request is drafted, show review controls for draft-type items *@
+                                    @if (Model.IsCurrentUserRequester && Model.Status == requestStatus.drafted && art.Type == requestArtworkType.drafted)
+                                    {
+                                        <div class="mt-3 flex gap-2">
+                                            <form asp-controller="CommissionPlans" asp-action="ReviewDraft" method="post" class="inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="rId" value="@Model.RId" />
+                                                <input type="hidden" name="raId" value="@art.RAId" />
+                                                <input type="hidden" name="approved" value="true" />
+                                                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                            </form>
+
+                                            <label for="rejectModal-@art.RAId" class="btn btn-sm btn-error">Reject</label>
+
+                                            <input type="checkbox" id="rejectModal-@art.RAId" class="modal-toggle" />
+                                            <div class="modal">
+                                                <div class="modal-box">
+                                                    <h3 class="font-bold text-lg">Reject draft</h3>
+                                                    <p class="py-2">Please provide a comment to help the artist improve the draft.</p>
+                                                    <form asp-controller="CommissionPlans" asp-action="ReviewDraft" method="post">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="rId" value="@Model.RId" />
+                                                        <input type="hidden" name="raId" value="@art.RAId" />
+                                                        <input type="hidden" name="approved" value="false" />
+                                                        <textarea name="comment" class="w-full textarea textarea-bordered" rows="3" required></textarea>
+                                                        <div class="modal-action mt-3">
+                                                            <button type="submit" class="btn btn-error">Reject</button>
+                                                            <label for="rejectModal-@art.RAId" class="btn">Cancel</label>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-gray-500 mt-2">No artworks uploaded yet.</p>
+                    }
+                </div>
+
+                <div class="mt-6 space-y-4">
+                    @* Artist upload draft when request is approved *@
+                    @if (Model.IsCurrentUserReceiver && Model.Status == requestStatus.approved)
+                    {
+                        <div class="card p-4 bg-base-200">
+                            <h4 class="font-semibold">Upload draft</h4>
+                            <form asp-controller="CommissionPlans" asp-action="UploadDraft" method="post" enctype="multipart/form-data" class="mt-3">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="rId" value="@Model.RId" />
+                                <input type="file" name="file" accept="image/*" required class="file-input file-input-bordered w-full" />
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-primary">Upload Draft</button>
+                                </div>
+                            </form>
+                        </div>
+                    }
+
+                    @* Requester can finalize approval/rejection is handled above per artwork *@
+
+                    @* Artist uploads final completed artwork when draft_approved *@
+                    @if (Model.IsCurrentUserReceiver && Model.Status == requestStatus.draft_approved)
+                    {
+                        <div class="card p-4 bg-base-200">
+                            <h4 class="font-semibold">Upload final artwork</h4>
+                            <form asp-controller="CommissionPlans" asp-action="UploadCompleted" method="post" enctype="multipart/form-data" class="mt-3">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="rId" value="@Model.RId" />
+                                <input type="file" name="file" accept="image/*" required class="file-input file-input-bordered w-full" />
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-success">Upload Completed Artwork</button>
+                                </div>
+                            </form>
+                        </div>
+                    }
+
+                    @* Receiver can reject request anytime *@
+                    @if (Model.IsCurrentUserReceiver && Model.Status != requestStatus.rejected && Model.Status != requestStatus.cancelled && Model.Status != requestStatus.completed)
+                    {
+                        <form asp-controller="CommissionPlans" asp-action="ReceiverReject" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="rId" value="@Model.RId" />
+                            <button type="submit" class="btn btn-outline btn-error" onclick="return confirm('Reject this request? This will mark it rejected.')">Reject Request</button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="col-span-1">
+                <div class="card bg-base-200 p-4">
+                    <div class="flex items-center gap-3">
+                        <img src="@(Model.ReceiverProfilePic ?? "/images/blank_profile.webp")" class="w-12 h-12 rounded-full object-cover" />
+                        <div>
+                            <div class="text-sm font-semibold">@Model.ReceiverName</div>
+                            <div class="text-xs text-gray-500">Artist</div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-500">Amount</p>
+                        <div class="text-lg font-bold">RM @Model.TotalAmount.ToString("F2")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

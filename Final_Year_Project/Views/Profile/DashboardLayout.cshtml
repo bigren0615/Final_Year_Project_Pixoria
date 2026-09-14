@@ -1,0 +1,48 @@
+﻿@{
+	ViewData["Title"] = "Dashboard";
+	var currentPath = Context.Request.Path.Value?.ToLower() ?? "";
+}
+
+<div id="dashboard-container" class="min-h-screen bg-base-200">
+	<div class="p-10">
+		<h1 class="text-2xl font-bold text-gray-800 mb-4">Dashboard</h1>
+		<div role="tablist" class="tabs flex gap-3">
+			<a href="/Profile/dashboard/follower"
+			   role="tab"
+			   class="tab rounded-full btn @(currentPath.Contains("/profile/dashboard/follower") ? "btn-neutral tab-active" : "btn-ghost")">
+				Follower & Subscriber
+			</a>
+
+			<a href="/Profile/dashboard/commissions"
+			   role="tab"
+			   class="tab rounded-full btn @(currentPath.Contains("/profile/dashboard/commissions") ? "btn-neutral tab-active" : "btn-ghost")">
+				Commissions
+			</a>
+		</div>
+
+		<section id="dashboard-content" class="py-6 transition-opacity duration-300 opacity-100">
+			@{
+				var tab = ViewData["InitialDashTab"]?.ToString()?.ToLower() ?? "home";
+				switch (tab)
+				{
+					case "follower":
+						@await Html.PartialAsync("_FollowerDashPartial")
+						;
+						break;
+					case "commissions":
+						@await Html.PartialAsync("_CommissionsDashPartial")
+						;
+						break;
+					default:
+						@await Html.PartialAsync("_FollowerDashPartial")
+						;
+						break;
+				}
+			}
+		</section>
+	</div>
+</div>
+@section Scripts {
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+}
+

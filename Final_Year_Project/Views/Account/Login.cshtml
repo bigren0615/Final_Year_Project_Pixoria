@@ -1,0 +1,122 @@
+﻿@using Final_Year_Project.Models.Account
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-white">
+    <div class="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 border border-rose-100">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-primary">Login</h1>
+        </div>
+
+        <!-- Alert Messages -->
+        @{
+            var alertClass = TempData["AlertClass"]?.ToString() ?? "";
+        }
+        @if (TempData["Info"] != null)
+        {
+            <div class="mb-6 p-4 rounded-xl border @(alertClass.Contains("success") ? "bg-green-50 border-green-200" : alertClass.Contains("danger") ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200")">
+                <p class="@(alertClass.Contains("success") ? "text-green-800" : alertClass.Contains("danger") ? "text-red-800" : "text-blue-800")">
+                    @TempData["Info"]
+                </p>
+            </div>
+        }
+
+        <form asp-action="Login" method="post" class="space-y-6">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="All" class="text-sm text-red-600"></div>
+            <div>
+                <input asp-for="Identifier" type="text" placeholder="Email or Username"
+                       class="mt-2 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-rose-400 focus:outline-none" />
+                <span asp-validation-for="Identifier" class="text-sm text-red-600"></span>
+            </div>
+
+            <div class="relative">
+                <input asp-for="Password"
+                       id="loginPassword"
+                       type="password"
+                       placeholder="Password"
+                       class="mt-2 w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-rose-400 focus:outline-none" />
+
+                <button type="button"
+                        onclick="togglePassword('loginPassword', 'loginEyeOpen', 'loginEyeClose')"
+                        class="absolute inset-y-0 right-3 flex items-center text-gray-500">
+
+                    <svg id="loginEyeOpen" xmlns="http://www.w3.org/2000/svg"
+                         width="20" height="20" fill="currentColor"
+                         class="bi bi-eye-fill"
+                         viewBox="0 0 16 16">
+                        <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0" />
+                        <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7" />
+                    </svg>
+
+                    <svg id="loginEyeClose" xmlns="http://www.w3.org/2000/svg"
+                         width="20" height="20" fill="currentColor"
+                         class="bi bi-eye-slash-fill hidden"
+                         viewBox="0 0 16 16">
+                        <path d="m10.79 12.912-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7 7 0 0 0 2.79-.588M5.21 3.088A7 7 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.939 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474z" />
+                        <path d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829zm4.95.708-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6-12-12 .708-.708 12 12z" />
+                    </svg>
+
+                </button>
+            </div>
+
+
+            <div class="flex items-center justify-between text-sm text-gray-600">
+                <label class="flex items-center">
+                    <input asp-for="RememberMe" type="checkbox" class="rounded" />
+                    <span class="ml-2">@Html.DisplayNameFor(m => m.RememberMe)</span>
+                </label>
+                <a href="/Account/ForgotPassword" class="text-primary hover:underline">Forgot Password?</a>
+            </div>
+
+            <button type="submit"
+                    class="w-full py-3 btn btn-primary text-white font-semibold rounded-xl">
+                Log In
+            </button>
+        </form>
+
+        <p class="text-center text-sm text-gray-500 mt-6">
+            Don’t have an account?
+            <a href="/Account/Register" class="text-primary hover:underline font-medium">Join as Artist or Customer</a>
+        </p>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        function togglePassword(inputId, openId, closeId) {
+            const input = document.getElementById(inputId);
+            const openIcon = document.getElementById(openId);
+            const closeIcon = document.getElementById(closeId);
+
+            if (input.type === "password") {
+                input.type = "text";
+                openIcon.classList.add("hidden");
+                closeIcon.classList.remove("hidden");
+            } else {
+                input.type = "password";
+                closeIcon.classList.add("hidden");
+                openIcon.classList.remove("hidden");
+            }
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.querySelector('form[asp-action="Login"]') || document.querySelector('form');
+            if (!form) return;
+            form.addEventListener('submit', function () {
+                try {
+                    if (window.clearProfileCache) {
+                        window.clearProfileCache();
+                    }
+                } catch (e) {}
+            });
+        });
+    </script>
+
+    <partial name="_ValidationScriptsPartial" />
+}

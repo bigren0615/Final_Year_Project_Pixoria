@@ -1,0 +1,219 @@
+﻿@model Final_Year_Project.Models.SubscriptionPlans.PlansAddEditVM
+@{
+	ViewData["Title"] = "Edit Plans";
+}
+
+<div class="min-h-screen bg-base-200 flex justify-center">
+	<div class="max-w-4xl w-full mt-10 bg-base-100 card shadow-md">
+		<div class="card-body">
+			<h1 class="text-2xl font-bold text-gray-800 mb-4">Subscription Plan</h1>
+			@using (Html.BeginForm("PlansEdit", "SubscriptionPlans", FormMethod.Post, new { enctype = "multipart/form-data" }))
+			{
+				@Html.AntiForgeryToken()
+				<div class="px-6 space-y-6">
+					<div>
+						<label class="block font-semibold text-gray-800 mb-1">Plan Name<span class="text-error">*</span></label>
+						<div class="relative">
+							@Html.TextBoxFor(m => m.Title, new { @class = "w-full border border-gray-300 rounded-md px-4 pr-18 py-2 focus:border-gray-500 focus:outline-none focus:ring-0", maxlength = "40", id = "planNameInput" })
+							<div id="planNameCountContainer" class="absolute bottom-2 right-3 text-sm text-gray-500 pointer-events-none">
+								<span id="planNameCount">0</span><span class="ml-1">/ 40</span>
+							</div>
+						</div>
+						@Html.ValidationMessageFor(m => m.Title, "", new { @class = "text-error text-sm" })
+					</div>
+
+					<div>
+						<label class="block font-semibold text-gray-800 mb-1">Amount (RM)<span class="text-error">*</span></label>
+						<p class="w-full text-lg font-semibold text-gray-700">
+							@Model.Price.ToString("F2")
+						</p>
+					</div>
+
+					<div>
+						<label class="block font-semibold text-gray-800 mb-1">Description</label>
+						<div class="relative">
+							@Html.TextAreaFor(m => m.Description, 4, 40, new { @class = "w-full border border-gray-300 rounded-md px-4 pr-18 py-2 focus:border-gray-500 focus:outline-none focus:ring-0 resize-none", maxlength = "500", id = "descInput" })
+							<div id="descCountContainer" class="absolute bottom-2 right-3 text-sm text-gray-500 pointer-events-none">
+								<span id="descCount">0</span><span class="ml-1">/ 500</span>
+							</div>
+						</div>
+						@Html.ValidationMessageFor(m => m.Description, "", new { @class = "text-error text-sm" })
+					</div>
+
+					<div>
+						<label class="block font-semibold text-gray-800 mb-1">Cover Image</label>
+						<div class="relative w-1/2">
+							<div id="imagePreviewContainer" class="w-full border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center bg-gray-50 h-48 cursor-pointer hover:border-gray-400 transition-colors duration-200 ease-in-out">
+								<span id="imagePlaceholder" class="text-gray-500">
+									<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52"
+										 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+										<path d="M8 4v8M4 8h8"
+											  stroke="currentColor" stroke-width="1.6"
+											  stroke-linecap="round" stroke-linejoin="round" />
+									</svg>
+								</span>
+								<img id="imagePreview" src="" alt="Preview" class="hidden w-full h-full object-cover rounded-md" />
+								<button type="button" id="removeImageBtn"
+										class="cursor-pointer hidden absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-opacity-80 transition">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" fill="none">
+										<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+									</svg>
+								</button>
+								<input type="hidden" id="RemoveCoverImage" name="RemoveCoverImage" value="false" />
+							</div>
+							@Html.TextBoxFor(m => m.CoverImage, new { type = "file", accept = "image/*", @class = "hidden", id = "coverImageInput" })
+						</div>
+					</div>
+
+					<div class="flex flex-col items-center mt-10 space-y-3">
+						<button type="submit" id="addPlanBtn" class="btn btn-disabled" disabled>
+							<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-floppy2-fill" viewBox="0 0 16 16">
+								<path d="M12 2h-2v3h2z" />
+								<path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v13A1.5 1.5 0 0 0 1.5 16h13a1.5 1.5 0 0 0 1.5-1.5V2.914a1.5 1.5 0 0 0-.44-1.06L14.147.439A1.5 1.5 0 0 0 13.086 0zM4 6a1 1 0 0 1-1-1V1h10v4a1 1 0 0 1-1 1zM3 9h10a1 1 0 0 1 1 1v5H2v-5a1 1 0 0 1 1-1" />
+							</svg>
+							Save Plan
+						</button>
+
+						<label for="deleteModal" class="text-error text-sm hover:underline hover:text-red-600 cursor-pointer">
+							Delete this plan
+						</label>
+					</div>
+
+				</div>
+			}
+			<input type="checkbox" id="deleteModal" class="modal-toggle" />
+			<div class="modal" role="dialog">
+				<div class="modal-box">
+					<h3 class="font-bold text-lg">Confirm Delete?</h3>
+					<p class="py-4">
+						Are you sure you want to delete this plan?<br />
+						Deleting this plan will immediately cancel subscriptions for all current members.
+					</p>
+
+					<div class="modal-action justify-center items-center">
+						<label for="deleteModal" class="btn">Cancel</label>
+						<form asp-action="PlansDelete" asp-controller="SubscriptionPlans" method="post" class="inline">
+							@Html.AntiForgeryToken()
+							<input type="hidden" name="id" value="@Model.SPId" />
+							<button type="submit" class="btn bg-red-500 hover:bg-red-600 text-white border-none">
+								Delete
+							</button>
+						</form>
+					</div>
+				</div>
+				<label class="modal-backdrop" for="deleteModal"></label>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	document.addEventListener("DOMContentLoaded", () => {
+		const planNameInput = document.getElementById("planNameInput");
+		const planNameCount = document.getElementById("planNameCount");
+		const planNameCountContainer = document.getElementById("planNameCountContainer");
+		const planNameMaxLen = 40;
+
+		const descInput = document.getElementById("descInput");
+		const descCount = document.getElementById("descCount");
+		const descCountContainer = document.getElementById("descCountContainer");
+		const descMaxLen = 500;
+
+		const addPlanBtn = document.getElementById("addPlanBtn");
+
+		const imagePreviewContainer = document.getElementById("imagePreviewContainer");
+		const coverImageInput = document.getElementById("coverImageInput");
+		const imagePreview = document.getElementById("imagePreview");
+		const imagePlaceholder = document.getElementById("imagePlaceholder");
+		const removeImageBtn = document.getElementById("removeImageBtn");
+		const removeCoverInput = document.getElementById("RemoveCoverImage");
+
+		planNameInput.addEventListener("input", updatePlanNameCount);
+		descInput.addEventListener("input", updateDescCount);
+
+		imagePreviewContainer.addEventListener("click", () => coverImageInput.click());
+		removeImageBtn.addEventListener("click", handleRemoveImage);
+		coverImageInput.addEventListener("change", handleImageUpload);
+
+		function updatePlanNameCount() {
+			const currentLen = planNameInput.value.length;
+			planNameCount.textContent = currentLen;
+			planNameCountContainer.classList.toggle("text-red-500", currentLen > planNameMaxLen);
+			planNameCountContainer.classList.toggle("text-gray-500", currentLen <= planNameMaxLen);
+			checkInputs();
+		}
+
+		function updateDescCount() {
+			const currentLen = descInput.value.length;
+			descCount.textContent = currentLen;
+			descCountContainer.classList.toggle("text-red-500", currentLen > descMaxLen);
+			descCountContainer.classList.toggle("text-gray-500", currentLen <= descMaxLen);
+		}
+
+		function checkInputs() {
+			const nameFilled = planNameInput.value.trim().length > 0;
+			if (nameFilled) {
+				addPlanBtn.disabled = false;
+				addPlanBtn.classList.remove("btn-disabled");
+				addPlanBtn.classList.add("btn-primary", "text-white");
+			} else {
+				addPlanBtn.disabled = true;
+				addPlanBtn.classList.remove("btn-primary", "text-white");
+				addPlanBtn.classList.add("btn-disabled");
+			}
+		}
+
+		function handleImageUpload(e) {
+			const file = e.target.files[0];
+			if (!file) return;
+			if (!["image/jpeg", "image/png"].includes(file.type)) {
+				coverImageInput.value = "";
+				return;
+			}
+			const reader = new FileReader();
+			reader.onload = (event) => {
+				imagePreview.src = event.target.result;
+				imagePreview.classList.remove("hidden");
+				imagePlaceholder.classList.add("hidden");
+				removeImageBtn.classList.remove("hidden");
+				imagePreviewContainer.classList.remove("border-dashed", "bg-gray-50");
+				imagePreviewContainer.classList.add("border-solid");
+
+				if (removeCoverInput) removeCoverInput.value = "false";
+			};
+			reader.readAsDataURL(file);
+		}
+
+		function handleRemoveImage(e) {
+			e.stopPropagation();
+			imagePreview.src = "";
+			imagePreview.classList.add("hidden");
+			imagePlaceholder.classList.remove("hidden");
+			removeImageBtn.classList.add("hidden");
+			imagePreviewContainer.classList.add("border-dashed", "bg-gray-50");
+			imagePreviewContainer.classList.remove("border-solid");
+			coverImageInput.value = "";
+
+			if (removeCoverInput) removeCoverInput.value = "true";
+		}
+
+		updatePlanNameCount();
+		updateDescCount();
+		checkInputs();
+
+		const existingImageUrl = "@Model.CoverImageUrl";
+		if (existingImageUrl && existingImageUrl.trim() !== "") {
+			imagePreview.src = existingImageUrl;
+			imagePreview.classList.remove("hidden");
+			imagePlaceholder.classList.add("hidden");
+			removeImageBtn.classList.remove("hidden");
+			imagePreviewContainer.classList.remove("border-dashed", "bg-gray-50");
+			imagePreviewContainer.classList.add("border-solid");
+
+			if (removeCoverInput) removeCoverInput.value = "false";
+		}
+	});
+</script>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}

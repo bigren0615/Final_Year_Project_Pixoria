@@ -1,0 +1,147 @@
+﻿@model Final_Year_Project.Models.Profile.ProfileViewModel
+@{
+	ViewData["Title"] = "Profile";
+}
+
+@if (TempData["SubscribeCancelMessage"] != null)
+{
+	<input type="checkbox" id="successModalToggle" class="modal-toggle" checked />
+
+	<div class="modal">
+		<div class="modal-box relative text-center">
+			@if (!string.IsNullOrEmpty(Model.ProfilePicUrl))
+			{
+				<div class="avatar">
+					<div class="w-30 rounded-full">
+						<img src="@(!string.IsNullOrEmpty(Model.ProfilePicUrl) ? Model.ProfilePicUrl : Url.Content("~/images/blank_profile.webp"))" draggable="false" />
+					</div>
+				</div>
+			}
+			<h3 class="font-bold text-lg pt-2">@TempData["SubscribeCancelMessage"]</h3>
+			<div class="modal-action justify-center items-center">
+				<label for="successModalToggle" class="btn">Close</label>
+			</div>
+		</div>
+	</div>
+}else if (TempData["SubscribeMessage"] != null)
+{
+	<input type="checkbox" id="successModalToggle" class="modal-toggle" checked />
+
+	<div class="modal">
+		<div class="modal-box relative text-center">
+			@if (!string.IsNullOrEmpty(Model.ProfilePicUrl))
+			{
+				<div class="avatar">
+					<div class="w-30 rounded-full">
+						<img src="@(!string.IsNullOrEmpty(Model.ProfilePicUrl) ? Model.ProfilePicUrl : Url.Content("~/images/blank_profile.webp"))" draggable="false" />
+					</div>
+				</div>
+			}
+			<h3 class="font-bold text-lg pt-2">@TempData["SubscribeMessage"]</h3>
+			<div class="modal-action justify-center items-center">
+				<label for="successModalToggle" class="btn">Close</label>
+			</div>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+	<script>
+		function celebrate() {
+		  confetti({
+			particleCount: 150,
+			spread: 1000,
+			origin: { y: 0.6 }
+		  });
+		}
+
+		// Call this function when subscription is successful
+		celebrate();
+	</script>
+}
+
+
+<div id="profile-container" class="min-h-screen bg-base-200">
+	@await Html.PartialAsync("_ProfileHeader", Model)
+
+	<section id="profile-content" class="p-6 transition-opacity duration-300 opacity-100">
+		@{
+			var tab = ViewData["InitialTab"]?.ToString()?.ToLower() ?? "home";
+			switch (tab)
+			{
+				case "posts":
+					@await Html.PartialAsync("_PostsPartial", Model)
+					;
+					break;
+				case "plans":
+					@await Html.PartialAsync("_PlansPartial", Model)
+					;
+					break;
+				case "commissions":
+					@await Html.PartialAsync("_CommissionsPartial", Model)
+					;
+					break;
+				case "products":
+					@await Html.PartialAsync("_ProductsPartial", Model)
+					;
+					break;
+				default:
+					@await Html.PartialAsync("_HomePartial", Model)
+					;
+					break;
+			}
+		}
+	</section>
+</div>
+@section Scripts {
+	<script src="~/js/app-cache.js"></script>
+	<script src="~/js/page-loader.js"></script>
+	<script>
+		// Initialize page loader for profile content
+		const profileLoader = new PageLoader('#profile-content', {
+			cacheCategory: 'profile'
+		});
+
+		function scrollGallery(direction) {
+			const container = document.getElementById('artworkGallery');
+			const scrollAmount = container.offsetWidth * 0.8;
+			if (direction === 'left') {
+				container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+			} else {
+				container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+			}
+		}
+
+
+
+
+		// Tab navigation - links marked with data-ajax will use PageLoader
+		document.addEventListener('click', (e) => {
+			const tab = e.target.closest('.profile-tab');
+			if (tab) {
+				e.preventDefault();
+				document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('tab-active'));
+				tab.classList.add('tab-active');
+			}
+		});
+
+		// Setup prefetching for non-active tabs on page load
+		document.addEventListener('DOMContentLoaded', () => {
+			// Optional: Prefetch other tabs in background
+			const tabs = document.querySelectorAll('.profile-tab');
+			tabs.forEach((tab, index) => {
+				if (!tab.classList.contains('tab-active') && index < 3) {
+					const href = tab.getAttribute('href');
+					if (href) {
+						// Prefetch but don't display
+						fetch(href, {
+							headers: { 'X-Requested-With': 'XMLHttpRequest' }
+						}).then(r => r.text()).then(html => {
+							const key = `page:${href}`;
+							window.AppCache.set(key, html, 'profile');
+						}).catch(() => {});
+					}
+				}
+			});
+		});
+
+	</script>
+}

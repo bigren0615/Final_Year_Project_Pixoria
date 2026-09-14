@@ -1,0 +1,106 @@
+@model Final_Year_Project.Models.RewardPoint.VoucherRedemptionViewModel
+
+<div class="container bg-base-200 mx-auto px-4 py-8">
+    <!-- Alert Messages -->
+    @if (TempData["Info"] != null)
+    {
+        <div class="alert @TempData["AlertClass"] mb-6">
+            <span>@TempData["Info"]</span>
+        </div>
+    }
+
+    <!-- Current Balance -->
+    <div class="bg-white p-6 rounded-2xl shadow border border-pink-100 mb-8">
+        <div class="bg-gradient-to-r from-pink-50 to-red-50 border-2 border-pink-200 rounded-xl shadow-md p-6 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-pink-700">Current Balance</h3>
+                <p class="text-3xl font-extrabold text-pink-600">@Model.TotalRewardPoints Points</p>
+            </div>
+            <div class="text-5xl">✨</div>
+        </div>
+    </div>
+
+    <!-- Voucher Redemption Section -->
+    <div class="bg-white p-6 rounded-2xl shadow border border-pink-100 mb-8">
+        <h2 class="text-2xl font-semibold text-pink-600 mb-4">Redeem Vouchers</h2>
+        <p class="text-gray-600 mb-6">Use your reward points to redeem vouchers for physical product & shipping discount. Redeemed vouchers will appear in your active vouchers below.</p>
+
+        <!-- Voucher Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            @foreach (var voucher in Model.AvailableVouchers)
+            {
+                var isShipping = voucher.VoucherType == "shipping";
+                var bgGradient = isShipping ? "from-pink-50 to-red-50" : "from-yellow-50 to-orange-50";
+                var borderColor = isShipping ? "border-pink-200" : "border-yellow-200";
+                var iconBg = isShipping ? "bg-pink-100" : "bg-yellow-100";
+                var iconColor = isShipping ? "text-pink-600" : "text-yellow-600";
+                var titleColor = isShipping ? "text-pink-700" : "text-yellow-700";
+                var pointColor = isShipping ? "text-pink-600" : "text-yellow-600";
+                var badgeBg = isShipping ? "bg-pink-500" : "bg-yellow-500";
+                var buttonBg = isShipping ? "bg-pink-500 hover:bg-pink-600" : "bg-yellow-500 hover:bg-yellow-600";
+                var icon = isShipping ? "🚚" : "💰";
+                var canAfford = Model.TotalRewardPoints >= voucher.PointCost;
+
+                <div class="relative bg-gradient-to-r @bgGradient border-2 @borderColor rounded-xl shadow-md p-5 flex flex-col">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 flex items-center justify-center @iconBg rounded-full @iconColor text-2xl">@icon</div>
+                        <h3 class="ml-4 text-lg font-semibold @titleColor">@voucher.VoucherName</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-4">@voucher.Description</p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Cost: <span class="font-bold @pointColor">@voucher.PointCost Points</span></span>
+                        @if (canAfford)
+                        {
+                            <form asp-action="RedeemVoucher" method="post" class="inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="voucherId" value="@voucher.VoucherId" />
+                                <button type="submit" class="px-4 py-2 rounded-lg @buttonBg text-white font-semibold transition">Redeem</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <button class="px-4 py-2 rounded-lg bg-gray-300 text-gray-500 font-semibold cursor-not-allowed" disabled>Not Enough Points</button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 text-sm text-gray-500">
+            💡 Tip: Each voucher costs 500 points. Vouchers will be stored in your active vouchers section below after redemption.
+        </div>
+    </div>
+
+    <!-- Active Vouchers Section -->
+    <div class="bg-white p-6 rounded-2xl shadow border border-pink-100">
+        <h3 class="text-lg font-semibold text-pink-600 mb-4">🎫 My Active Vouchers</h3>
+        @if (Model.ActiveUserVouchers.Any())
+        {
+            <div class="bg-gray-50 border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-200">
+                @foreach (var userVoucher in Model.ActiveUserVouchers)
+                {
+                    var isShipping = userVoucher.VoucherType == "shipping";
+                    var iconBg = isShipping ? "bg-pink-100" : "bg-yellow-100";
+                    var iconColor = isShipping ? "text-pink-600" : "text-yellow-600";
+                    var icon = isShipping ? "🚚" : "💰";
+
+                    <div class="flex items-center p-4">
+                        <div class="w-10 h-10 flex items-center justify-center @iconBg rounded-full @iconColor text-xl mr-4">@icon</div>
+                        <div class="flex-1">
+                            <span class="text-gray-700 font-medium">@userVoucher.VoucherName</span>
+                            <p class="text-sm text-gray-500">Redeemed on @userVoucher.CreatedAt.ToString("MMMM dd, yyyy HH:mm")</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">@userVoucher.Status</span>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-8 text-gray-500">
+                <p>You don't have any active vouchers yet. Redeem your points above to get started!</p>
+            </div>
+        }
+    </div>
+</div>

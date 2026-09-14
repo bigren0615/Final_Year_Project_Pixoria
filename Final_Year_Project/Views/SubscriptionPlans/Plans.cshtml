@@ -1,0 +1,116 @@
+﻿@model Final_Year_Project.Models.SubscriptionPlans.SubscriptionPlanViewModel
+@{
+	ViewData["Title"] = Model.Title + " | " + Model.Nickname ?? "Plans";
+	var currentDate = DateTime.Now;
+	var nextMonthDate = DateTime.Now.AddMonths(1);
+}
+
+<div class="min-h-screen bg-base-200 flex justify-center">
+	<div class="max-w-4xl w-full mt-10 bg-base-100 card shadow-md">
+		<div class="card-body">
+			<div class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-3">
+				<div class="avatar">
+					<div class="w-10 rounded-full">
+						<img src="@(!string.IsNullOrEmpty(Model.ProfileImageUrl) ? Model.ProfileImageUrl : Url.Content("~/images/blank_profile.webp"))" draggable="false" />
+					</div>
+				</div>
+				Support @Model.Nickname
+			</div>
+			<div class="p-6">
+				@if (TempData["ErrorMessage"] != null)
+				{
+					<div class="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">@TempData["ErrorMessage"]</div>
+				}
+				<div class="grid grid-cols-2 gap-4">
+					<div class="col-span-1 text-lg font-semibold">
+						<p>@Model.Title</p>
+						<p>RM @Model.Price.ToString("F2") <span class="text-sm">/Month</span></p>
+					</div>
+					<div class="col-span-1">
+						@if (!string.IsNullOrEmpty(Model.CoverImageUrl))
+						{
+							<figure class="h-50 overflow-hidden">
+								<img src="@Model.CoverImageUrl" alt="@Model.Title" loading="lazy" class="w-full h-full object-cover" draggable="false" />
+							</figure>
+						}
+					</div>
+				</div>
+				<p class="text-gray-600 leading-relaxed whitespace-pre-line py-3">@Html.Raw(Html.Encode(Model.Description).Replace("\n", "<br>"))</p>
+				<div class="bg-base-200 rounded-lg p-6 text-center my-4">
+					<p class="font-semibold text-lg text-gray-800 pb-3">Payment Section</p>
+					@if (!Model.Subscribed && Model.CanSubscribe)
+					{
+						<div class="bg-base-100 rounded-lg p-6 text-center my-4">
+							<div class="pb-3">
+								<p>Payment amount</p>
+								<p class="text-lg font-semibold">RM @Model.Price.ToString("F2") <span class="text-sm">/Month</span></p>
+								<p>Subscription start date: @currentDate.ToString("dd MMM yyyy")</p>
+								<P>Next payment: @nextMonthDate.ToString("dd MMM yyyy")</P>
+							</div>
+							<form asp-action="CreateCheckoutSession" asp-controller="SubscriptionPlans" method="post">
+								<input type="hidden" name="planId" value="@Model.SPId" />
+								<button type="submit" class="btn btn-primary rounded-md text-white w-30">
+									Payment
+								</button>
+							</form>
+						</div>
+					}
+					else if (!Model.CanSubscribe)
+					{
+						<div class="pb-3">
+							<p>You already have an active subscription for this creator. You can only subscribe to one plan per creator.</p>
+						</div>
+					}
+					else
+					{
+						<div class="btn btn-outline btn-primary rounded-md w-30 pointer-events-none">
+							Subscribed
+						</div>
+					}
+				</div>
+				@if (Model.Subscribed)
+				{
+					@if (Model.IsRenewal.GetValueOrDefault())
+					{
+						<div class="text-center">
+							<label for="cancelModal" class="btn btn-ghost">Stop Subscribing</label>
+						</div>
+						<input type="checkbox" id="cancelModal" class="modal-toggle" />
+						<div class="modal" role="dialog">
+							<div class="modal-box">
+								<p class="py-4">
+									Are you sure you want to stop subscribe @Model.Title?<br />
+									If you stop subscribing this creator, you won't be able to see their subscriber-only posts from next month.
+								</p>
+
+								<div class="modal-action justify-center items-center">
+									<label for="cancelModal" class="btn">Cancel</label>
+									<form asp-action="PlansCancel" asp-controller="SubscriptionPlans" method="post" class="inline">
+										@Html.AntiForgeryToken()
+										<input type="hidden" name="id" value="@Model.SPId" />
+										<button type="submit" class="btn bg-red-500 hover:bg-red-600 text-white border-none">
+											Stop Subscribing
+										</button>
+									</form>
+								</div>
+							</div>
+							<label class="modal-backdrop" for="cancelModal"></label>
+						</div>
+					}
+					else
+					{
+						<div class="text-center">
+							<form asp-action="PlansReSubscribe" asp-controller="SubscriptionPlans" method="post" class="inline">
+								@Html.AntiForgeryToken()
+								<input type="hidden" name="id" value="@Model.SPId" />
+								<button type="submit" class="btn btn-ghost">
+									Re-subscribe
+								</button>
+							</form>
+						</div>
+					}
+				}
+			</div>
+		</div>
+	</div>
+</div>

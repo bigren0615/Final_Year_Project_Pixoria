@@ -1,0 +1,432 @@
+@model Final_Year_Project.Models.FraudDetection.ScanAndMonitorViewModel
+@{
+    ViewData["Title"] = "Fraud Detection - Scan & Monitor";
+    Layout = "_AdminLayout";
+}
+
+<div class="min-h-screen bg-pink-50 flex flex-col p-6 space-y-8">
+    <!-- Service Status Banner -->
+    <div id="serviceStatus" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-lg">
+        <p class="font-medium">⚠️ Fraud Detection Service Status: <span id="statusText">Checking...</span></p>
+    </div>
+
+    <!-- Statistics Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+            <p class="text-3xl font-bold text-gray-700">@Model.TotalPosts</p>
+            <p class="text-sm text-gray-500">Total Posts</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+            <p class="text-3xl font-bold text-red-500">@Model.TotalFlagged</p>
+            <p class="text-sm text-gray-500">Flagged</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+            <p class="text-3xl font-bold text-yellow-500">@Model.TotalUnderReview</p>
+            <p class="text-sm text-gray-500">Under Review</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+            <p class="text-3xl font-bold text-green-500">@Model.TotalVerified</p>
+            <p class="text-sm text-gray-500">Verified</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+            <p class="text-3xl font-bold text-gray-500">@Model.TotalRejected</p>
+            <p class="text-sm text-gray-500">Rejected</p>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="flex gap-4">
+        <a href="/ArtworkFraudDetection/Statistics" class="btn btn-outline btn-primary">
+            View Statistics
+        </a>
+        <a href="/ArtworkFraudDetection/GenerateReport" class="btn btn-outline btn-secondary">
+            Generate Report
+        </a>
+    </div>
+
+    <!-- Scan Post Section -->
+    <div class="bg-white rounded-2xl shadow-md p-6">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Scan Post</h2>
+
+        <!-- Scan Results (Initially hidden, persists on subsequent scans) -->
+        <div id="scanResultContainer" class="hidden mt-6 p-5 border rounded-lg bg-gray-50">
+            <p class="font-medium text-gray-800 mb-3">Scan Result for: <span id="scannedPostTitle" class="text-pink-600"></span></p>
+            <p class="text-sm text-gray-600 mb-2">Artist: <span id="scannedArtistName"></span></p>
+            <p class="text-sm text-gray-600 mb-4">Overall Risk: <span id="overallRisk" class="font-bold"></span> (Source: <span id="overallSource"></span>)</p>
+            
+            <!-- Cover Image Scan Results -->
+            <div class="mb-6">
+                <h4 class="font-semibold text-gray-700 mb-2">Cover Image Scan:</h4>
+                <div id="coverScanTable" class="overflow-x-auto">
+                    <!-- Cover scan table will be populated via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Content Images Scan Results -->
+            <div>
+                <h4 class="font-semibold text-gray-700 mb-2">Content Images Scan:</h4>
+                <div id="contentScanTable" class="overflow-x-auto">
+                    <!-- Content scan table will be populated via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <form method="get" class="mb-4 mt-5">
+            <label class="block mb-2 font-medium text-gray-700">Select Post to Scan:</label>
+            <div class="flex gap-2">
+                <label class="input flex-1">
+                    <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none" stroke="currentColor">
+                            <circle cx="10" cy="11" r="8"></circle>
+                            <path d="m21 21-4.3-4.3"></path>
+                        </g>
+                    </svg>
+                    <input type="search" name="search" class="grow" placeholder="Search by post title or artist..." value="@Model.SearchQuery" />
+                </label>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <!-- Post List -->
+        <table class="w-full border border-gray-200 rounded-lg">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="p-3 text-left text-sm font-medium text-gray-600">Cover Image</th>
+                    <th class="p-3 text-left text-sm font-medium text-gray-600">Content Images</th>
+                    <th class="p-3 text-left text-sm font-medium text-gray-600">Post Title</th>
+                    <th class="p-3 text-left text-sm font-medium text-gray-600">Artist</th>
+                    <th class="p-3 text-left text-sm font-medium text-gray-600">Created At</th>
+                    <th class="p-3 text-left text-sm font-medium text-gray-600">Last Scan</th>
+                    <th class="p-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var post in Model.Posts)
+                {
+                    <tr class="border-t hover:bg-pink-50">
+                        <td class="p-3">
+                            <img src="@post.ImageUrl" class="w-20 h-20 object-cover rounded-lg" alt="@post.PostTitle cover" />
+                        </td>
+                        <td class="p-3">
+                            @if (post.ContentImageUrls.Any())
+                            {
+                                <div class="flex gap-1 flex-wrap max-w-xs">
+                                    @foreach (var contentImg in post.ContentImageUrls.Take(3))
+                                    {
+                                        <img src="@contentImg" class="w-16 h-16 object-cover rounded-lg border border-gray-200" alt="Content" />
+                                    }
+                                    @if (post.ContentImageUrls.Count > 3)
+                                    {
+                                        <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-600 border border-gray-200">
+                                            +@(post.ContentImageUrls.Count - 3) more
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-gray-400 text-sm">No content images</span>
+                            }
+                        </td>
+                        <td class="p-3">@post.PostTitle</td>
+                        <td class="p-3">@post.ArtistName</td>
+                        <td class="p-3">@post.CreatedAt.ToString("MMM dd, yyyy")</td>
+                        <td class="p-3">
+                            @if (post.HasBeenScanned)
+                            {
+                                <span class="badge @(post.LastScanStatus == "verified" ? "badge-success" : post.LastScanStatus == "rejected" ? "badge-error" : post.LastScanStatus == "flagged" ? "badge-warning" : "badge-info")">
+                                    @post.LastScanStatus?.Replace("_", " ")
+                                </span>
+                                <br />
+                                <small class="text-gray-500">@post.LastScanDate?.ToString("MMM dd, yyyy")</small>
+                            }
+                            else
+                            {
+                                <span class="text-gray-400">Not scanned</span>
+                            }
+                        </td>
+                        <td class="p-3 text-center">
+                            <button class="bg-pink-500 text-white px-6 py-2 rounded-lg hover:bg-pink-600 scan-btn"
+                                    data-post-id="@post.PostId"
+                                    data-post-title="@post.PostTitle">
+                                Scan Image
+                            </button>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Posts.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="p-6 text-center text-gray-500">No posts found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="flex justify-center mt-4 gap-2">
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <a href="?page=@i&search=@Model.SearchQuery" 
+                       class="btn @(i == Model.CurrentPage ? "btn-primary" : "btn-outline")">
+                        @i
+                    </a>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Flagged Post History -->
+    <div class="bg-white rounded-2xl shadow-md p-6">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Flagged Post History</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full border border-gray-200 rounded-lg">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-3 text-left text-sm font-medium text-gray-600">Post</th>
+                        <th class="p-3 text-left text-sm font-medium text-gray-600">Artist</th>
+                        <th class="p-3 text-left text-sm font-medium text-gray-600">Date Flagged</th>
+                        <th class="p-3 text-left text-sm font-medium text-gray-600">Detection Type</th>
+                        <th class="p-3 text-left text-sm font-medium text-gray-600">Confidence</th>
+                        <th class="p-3 text-left text-sm font-medium text-gray-600">Risk Level</th>
+                        <th class="p-3 text-left text-sm font-medium text-gray-600">Status</th>
+                        <th class="p-3"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var flagged in Model.FlaggedArtworks)
+                    {
+                        <tr class="border-t hover:bg-pink-50">
+                            <td class="p-3">
+                                <div class="flex items-center gap-2">
+                                    <img src="@flagged.ImageUrl" class="w-12 h-12 object-cover rounded-lg" alt="@flagged.PostTitle" />
+                                    <span>@flagged.PostTitle</span>
+                                </div>
+                            </td>
+                            <td class="p-3">@flagged.ArtistName</td>
+                            <td class="p-3">@flagged.FlaggedAt.ToString("yyyy-MM-dd")</td>
+                            <td class="p-3">
+                                @if (flagged.IsAiGenerated)
+                                {
+                                    <span class="badge badge-outline badge-sm">AI Generated</span>
+                                }
+                                @if (flagged.IsPlagiarized)
+                                {
+                                    <span class="badge badge-outline badge-sm">Plagiarism</span>
+                                }
+                            </td>
+                            <td class="p-3">
+                                <span class="font-bold @(flagged.ConfidencePercentage >= 80 ? "text-red-600" : flagged.ConfidencePercentage >= 60 ? "text-orange-500" : "text-yellow-500")">
+                                    @flagged.ConfidencePercentage%
+                                </span>
+                            </td>
+                            <td class="p-3">
+                                <span class="badge @(flagged.FraudRisk == "high" ? "badge-error" : flagged.FraudRisk == "medium" ? "badge-warning" : "badge-info")">
+                                    @flagged.FraudRisk.ToUpper()
+                                </span>
+                            </td>
+                            <td class="p-3">
+                                <span class="badge @(flagged.Status == "verified" ? "badge-success" : flagged.Status == "rejected" ? "badge-error" : flagged.Status == "under_review" ? "badge-warning" : "badge-ghost")">
+                                    @flagged.Status.Replace("_", " ")
+                                </span>
+                            </td>
+                            <td class="p-3 text-right">
+                                <a href="/ArtworkFraudDetection/ReviewArtwork/@flagged.FraudId" 
+                                   class="btn btn-sm btn-primary">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.FlaggedArtworks.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="p-6 text-center text-gray-500">No flagged posts found</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Download Reports -->
+        <div class="mt-6 flex justify-end gap-2">
+            <a href="/ArtworkFraudDetection/DownloadReport" class="btn btn-neutral">
+                Download Reports
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Scanning Modal -->
+<dialog id="scanningModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">Scanning Post...</h3>
+        <div class="py-4 text-center">
+            <span class="loading loading-spinner loading-lg text-pink-500"></span>
+            <p class="mt-2 text-gray-500">Please wait while we analyze the post for fraud detection.</p>
+        </div>
+    </div>
+</dialog>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check service status on load
+            checkServiceStatus();
+
+            // Add click handlers for scan buttons
+            document.querySelectorAll('.scan-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const postId = this.dataset.postId;
+                    const postTitle = this.dataset.postTitle;
+                    scanPost(postId, postTitle);
+                });
+            });
+        });
+
+        async function checkServiceStatus() {
+            try {
+                const response = await fetch('/ArtworkFraudDetection/ServiceStatus');
+                const data = await response.json();
+                
+                const statusBanner = document.getElementById('serviceStatus');
+                const statusText = document.getElementById('statusText');
+                
+                if (!data.isHealthy) {
+                    statusBanner.classList.remove('hidden');
+                    statusText.textContent = `${data.status} - The fraud detection service may be unavailable.`;
+                }
+            } catch (error) {
+                console.error('Failed to check service status:', error);
+            }
+        }
+
+        async function scanPost(postId, postTitle) {
+            const modal = document.getElementById('scanningModal');
+            modal.showModal();
+
+            try {
+                const response = await fetch('/ArtworkFraudDetection/ScanArtwork', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `postId=${encodeURIComponent(postId)}`
+                });
+
+                const data = await response.json();
+                modal.close();
+
+                if (data.success) {
+                    displayScanResult(data);
+                } else {
+                    alert('Scan failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                modal.close();
+                alert('Failed to scan post: ' + error.message);
+            }
+        }
+
+        function displayScanResult(data) {
+            const container = document.getElementById('scanResultContainer');
+            
+            const riskColors = {
+                'low': 'bg-green-100 text-green-800',
+                'medium': 'bg-orange-100 text-orange-800',
+                'high': 'bg-red-100 text-red-800'
+            };
+
+            // Update header info
+            document.getElementById('scannedPostTitle').textContent = data.postTitle;
+            document.getElementById('scannedArtistName').textContent = data.artistName;
+            document.getElementById('overallRisk').textContent = data.overallRisk.toUpperCase();
+            document.getElementById('overallRisk').className = `font-bold px-2 py-1 rounded ${riskColors[data.overallRisk]}`;
+            document.getElementById('overallSource').textContent = data.overallSource;
+
+            // Build Cover Scan Table
+            const coverScanTable = document.getElementById('coverScanTable');
+            if (data.coverScan) {
+                const cover = data.coverScan;
+                coverScanTable.innerHTML = `
+                    <table class="w-full border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">Image</th>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">Risk Level</th>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">Detection Type</th>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">AI Probability</th>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">Plagiarism Similarity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-t">
+                                <td class="p-3">
+                                    <img src="${cover.imageUrl}" class="w-20 h-20 object-cover rounded-lg" alt="Cover" />
+                                </td>
+                                <td class="p-3">
+                                    <span class="px-3 py-1 rounded-full text-sm font-semibold ${riskColors[cover.fraudRisk]}">${cover.fraudRisk.toUpperCase()}</span>
+                                </td>
+                                <td class="p-3">${cover.detectionType.replace('_', ' ')}</td>
+                                <td class="p-3">${(cover.aiProbability * 100).toFixed(1)}%</td>
+                                <td class="p-3">${(cover.plagiarismSimilarity * 100).toFixed(1)}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                coverScanTable.innerHTML = '<p class="text-gray-500 text-sm">No cover image found</p>';
+            }
+
+            // Build Content Scans Table
+            const contentScanTable = document.getElementById('contentScanTable');
+            if (data.contentScans && data.contentScans.length > 0) {
+                let contentRows = data.contentScans.map(content => `
+                    <tr class="border-t hover:bg-gray-50">
+                        <td class="p-3">
+                            <img src="${content.imageUrl}" class="w-20 h-20 object-cover rounded-lg" alt="${content.fileName}" />
+                        </td>
+                        <td class="p-3 text-sm">${content.fileName}</td>
+                        <td class="p-3">
+                            <span class="px-3 py-1 rounded-full text-sm font-semibold ${riskColors[content.fraudRisk]}">${content.fraudRisk.toUpperCase()}</span>
+                        </td>
+                        <td class="p-3">${(content.aiProbability * 100).toFixed(1)}%</td>
+                        <td class="p-3">${(content.plagiarismSimilarity * 100).toFixed(1)}%</td>
+                    </tr>
+                `).join('');
+
+                contentScanTable.innerHTML = `
+                    <table class="w-full border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">Image</th>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">File Name</th>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">Risk Level</th>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">AI Probability</th>
+                                <th class="p-3 text-left text-sm font-medium text-gray-600">Plagiarism Similarity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${contentRows}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                contentScanTable.innerHTML = '<p class="text-gray-500 text-sm">No content images found</p>';
+            }
+
+            // Show the container
+            container.classList.remove('hidden');
+            container.scrollIntoView({ behavior: 'smooth' });
+
+            // Reload page after 3 seconds if flagged
+            if (data.overallRisk !== 'low') {
+                setTimeout(() => location.reload(), 3000);
+            }
+        }
+    </script>
+}

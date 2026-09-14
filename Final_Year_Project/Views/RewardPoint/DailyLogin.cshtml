@@ -1,0 +1,78 @@
+@model Final_Year_Project.Models.RewardPoint.DailyLoginViewModel
+
+<div class="container bg-base-200 mx-auto px-4 py-8">
+    <!-- Alert Messages -->
+    @if (TempData["Info"] != null)
+    {
+        <div class="alert @TempData["AlertClass"] mb-6">
+            <span>@TempData["Info"]</span>
+        </div>
+    }
+
+    <div class="bg-white p-6 rounded-2xl shadow border border-pink-100 mb-8">
+        <h2 class="text-xl font-semibold text-pink-600 mb-4">Daily Login Reward</h2>
+        <p class="text-gray-600 mb-6">Log in every day to earn reward points!</p>
+
+        <!-- Current Balance -->
+        <div class="bg-gradient-to-r from-pink-50 to-red-50 border-2 border-pink-200 rounded-xl shadow-md p-6 mb-8 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-pink-700">Current Balance</h3>
+                <p class="text-3xl font-extrabold text-pink-600">@Model.TotalRewardPoints Points</p>
+            </div>
+            <div class="text-5xl">✨</div>
+        </div>
+
+        <!-- Daily Reward Card -->
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6 mb-6 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-yellow-700">Today's Reward</h3>
+                <p class="text-2xl font-bold text-yellow-600">+@Model.DailyRewardPoints Points</p>
+            </div>
+            <div>
+                @if (Model.HasClaimedToday)
+                {
+                    <button class="btn btn-disabled bg-gray-300 text-gray-500 cursor-not-allowed" disabled>
+                        ✓ Already Claimed
+                    </button>
+                }
+                else
+                {
+                    <form asp-action="ClaimDailyLogin" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn bg-gradient-to-r from-pink-500 to-red-500 text-white hover:from-pink-600 hover:to-red-600 border-0">
+                            🎁 Claim Reward
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Reward Point History -->
+    <div class="bg-white p-6 rounded-2xl shadow border border-pink-100">
+        <h3 class="text-lg font-semibold text-pink-600 mb-4">📜 Reward Point History</h3>
+        @if (Model.PointHistory.Any())
+        {
+            <div class="bg-gray-50 border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-200">
+                @foreach (var log in Model.PointHistory)
+                {
+                    <div class="flex justify-between items-center p-4">
+                        <div>
+                            <span class="text-gray-700 font-medium capitalize">@log.Remark</span>
+                            <p class="text-sm text-gray-500">@log.CreatedAt.ToString("MMMM dd, yyyy HH:mm")</p>
+                        </div>
+                        <span class="@(log.Point >= 0 ? "text-green-600" : "text-red-600") font-semibold">
+                            @(log.Point >= 0 ? "+" : "")@log.Point pts
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-8 text-gray-500">
+                <p>No reward point history yet. Claim your first daily login reward!</p>
+            </div>
+        }
+    </div>
+</div>

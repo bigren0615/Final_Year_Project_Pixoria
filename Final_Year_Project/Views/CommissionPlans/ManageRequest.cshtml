@@ -1,0 +1,473 @@
+@using Final_Year_Project.Enums
+@inject Final_Year_Project.Services.EnumService EnumService
+@using Final_Year_Project.Models.CommissionPlans
+@model ManageRequestViewModel
+
+@{
+	ViewData["Title"] = "Manage Request";
+	var badgeStyle = "";
+}
+
+<div class="min-h-screen bg-base-200">
+	<div class="p-10">
+		<div>
+			<h2 class="text-2xl font-bold mb-4">Manage Requests</h2>
+		</div>
+		@if (TempData["SuccessMessage"] != null)
+		{
+			<div class="bg-green-100 text-green-700 px-4 py-2 rounded mb-3">@TempData["SuccessMessage"]</div>
+		}
+		
+		<!-- Status Filter -->
+		<div class="mb-6 bg-base-100 p-4 rounded-md shadow-md">
+			<div class="flex items-center gap-4">
+				<label for="statusFilter" class="font-semibold text-sm">Filter by Status:</label>
+				<select id="statusFilter" class="select select-bordered select-sm w-full max-w-xs">
+					<option value="">All Statuses</option>
+					@foreach (var statusValue in Enum.GetValues(typeof(requestStatus)).Cast<requestStatus>())
+					{
+						<option value="@EnumService.GetEnumDisplayName(statusValue)">
+							@EnumService.GetEnumDisplayName(statusValue)
+						</option>
+					}
+				</select>
+			</div>
+		</div>
+		
+		<div role="tablist" class="tabs tabs-border bg-base-100 rounded-md shadow-md mb-6">
+			@if (Model.IsArtist)
+			{
+
+				<input type="radio" name="request_tabs" role="tab" class="tab font-medium" aria-label="Received Requests" checked />
+				<div role="tabpanel" class="tab-content p-6">
+					@if (Model.ReceivedRequests.Any())
+					{
+						<div class="space-y-4">
+							@foreach (var request in Model.ReceivedRequests)
+							{
+								@switch (request.Status)
+								{
+									case requestStatus.cancelled:
+									case requestStatus.rejected:
+										badgeStyle = "badge-error";
+										break;
+									case requestStatus.approved:
+									case requestStatus.drafted:
+										badgeStyle = "badge-info";
+										break;
+									case requestStatus.requested:
+										badgeStyle = "badge-warning";
+										break;
+									case requestStatus.completed:
+										badgeStyle = "badge-success";
+										break;
+									default:
+										badgeStyle = "badge-neutral";
+										break;
+								}
+
+								<div class="card bg-base-100 shadow-md request-card" data-status="@EnumService.GetEnumDisplayName(request.Status)">
+									<div class="card-body">
+										<div class="flex gap-4">
+											<div class="avatar w-16 h-16 flex-shrink-0">
+												<div class="rounded-full">
+													@if (!string.IsNullOrEmpty(request.UserProfilePic))
+													{
+														<img src="@request.UserProfilePic" alt="@request.UserName" width="64" height="64" loading="lazy" decoding="async" />
+													}
+													else
+													{
+														<img src="/images/blank_profile.webp" alt="@request.UserName" width="64" height="64" loading="lazy" decoding="async" />
+													}
+												</div>
+											</div>
+
+											<div class="flex-1">
+												<div class="flex justify-between items-start">
+													<div>
+														<h3 class="font-bold text-lg">@request.UserName</h3>
+														<p class="text-sm text-gray-500">Commission: <span class="font-semibold">@request.PlanTitle</span></p>
+														<p class="text-sm text-gray-500">Requested: @request.RequestDate.ToString("MMM dd, yyyy HH:mm")</p>
+														@if (request.Deadline.HasValue && request.Deadline > DateTime.MinValue)
+														{
+															<p class="text-sm text-gray-500">Deadline: <span class="font-semibold">@request.Deadline.Value.ToString("MMM dd, yyyy")</span></p>
+														}
+													</div>
+													<div class="flex flex-col gap-2 items-end">
+														<div class="badge badge-outline @badgeStyle">
+															@EnumService.GetEnumDisplayName(request.Status)
+														</div>
+														@if (request.PaymentStatus == paymentStatus.refunded)
+														{
+															<div class="badge badge-outline @badgeStyle">
+																@EnumService.GetEnumDisplayName(request.PaymentStatus)
+															</div>
+														}
+													</div>
+												</div>
+
+												<div class="mt-3">
+													<p class="text-sm"><strong>Description:</strong> @request.RequestDescription</p>
+												</div>
+
+												@if (request.Tags != null && request.Tags.Any())
+												{
+													<div class="mt-3">
+														<p class="text-sm"><strong>Tags:</strong></p>
+														<div class="flex flex-wrap gap-2 mt-1">
+															@foreach (var tag in request.Tags)
+															{
+																<span class="badge badge-primary badge-outline">@tag</span>
+															}
+														</div>
+													</div>
+												}
+															<div class="mt-3 flex gap-6">
+													<div>
+														<p class="text-sm text-gray-500">Amount</p>
+														<p class="font-bold">RM @request.TotalAmount.ToString("F2")</p>
+													</div>
+												</div>
+
+												<div class="mt-4 flex gap-2">
+													@if (request.Status == requestStatus.requested)
+													{
+														<form id="acceptRequestForm-@request.RId" asp-controller="CommissionPlans" asp-action="AcceptRequest" method="post" class="inline">
+															@Html.AntiForgeryToken()
+															<input type="hidden" name="rId" value="@request.RId" />
+															<button type="submit" class="btn btn-sm btn-outline btn-info">Accept</button>
+														</form>
+														<label for="declineRequestModal" class="btn btn-sm btn-outline btn-error" onclick="document.getElementById('declineRequestIdValue').value = '@request.RId'">Decline</label>
+													}
+													<a href="/CommissionPlans/request/@request.RId" class="btn btn-sm btn-primary w-30 text-white">Details</a>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							}
+						</div>
+					}
+					else
+					{
+						<div class="text-center py-8 text-gray-500">
+							<p>No received requests yet</p>
+						</div>
+					}
+				</div>
+
+				<input type="radio" name="request_tabs" role="tab" class="tab font-medium" aria-label="Sent Requests" />
+				<div role="tabpanel" class="tab-content p-6">
+					@if (Model.SentRequests.Any())
+					{
+						<div class="space-y-4">
+							@foreach (var request in Model.SentRequests)
+							{
+								@switch (request.Status)
+								{
+									case requestStatus.cancelled:
+									case requestStatus.rejected:
+										badgeStyle = "badge-error";
+										break;
+									case requestStatus.approved:
+									case requestStatus.drafted:
+										badgeStyle = "badge-info";
+										break;
+									case requestStatus.requested:
+										badgeStyle = "badge-warning";
+										break;
+									case requestStatus.completed:
+										badgeStyle = "badge-success";
+										break;
+									default:
+										badgeStyle = "badge-neutral";
+										break;
+								}
+
+								<div class="card bg-base-100 shadow-md request-card" data-status="@EnumService.GetEnumDisplayName(request.Status)">
+									<div class="card-body">
+										<div class="flex gap-4">
+											<div class="avatar w-16 h-16 flex-shrink-0">
+												<div class="rounded-full">
+													@if (!string.IsNullOrEmpty(request.UserProfilePic))
+													{
+														<img src="@request.UserProfilePic" alt="@request.UserName" width="64" height="64" loading="lazy" decoding="async" />
+													}
+													else
+													{
+														<img src="/images/blank_profile.webp" alt="@request.UserName" width="64" height="64" loading="lazy" decoding="async" />
+													}
+												</div>
+											</div>
+											<div class="flex-1">
+												<div class="flex justify-between items-start">
+													<div>
+														<h3 class="font-bold text-lg">@request.UserName</h3>
+														<p class="text-sm text-gray-500">Commission: <span class="font-semibold">@request.PlanTitle</span></p>
+														<p class="text-sm text-gray-500">Sent: @request.RequestDate.ToString("MMM dd, yyyy HH:mm")</p>
+														@if (request.Deadline.HasValue && request.Deadline > DateTime.MinValue)
+														{
+															<p class="text-sm text-gray-500">Deadline: <span class="font-semibold">@request.Deadline.Value.ToString("MMM dd, yyyy")</span></p>
+														}
+													</div>
+													<div class="flex flex-col gap-2 items-end">
+														<div class="badge badge-outline @badgeStyle">
+															@EnumService.GetEnumDisplayName(request.Status)
+														</div>
+														@if (request.PaymentStatus == paymentStatus.refunded)
+														{
+															<div class="badge badge-outline @badgeStyle">
+																@EnumService.GetEnumDisplayName(request.PaymentStatus)
+															</div>
+														}
+													</div>
+												</div>
+
+												<div class="mt-3">
+													<p class="text-sm"><strong>Description:</strong> @request.RequestDescription</p>
+												</div>
+
+												@if (request.Tags != null && request.Tags.Any())
+												{
+													<div class="mt-3">
+														<p class="text-sm"><strong>Tags:</strong></p>
+														<div class="flex flex-wrap gap-2 mt-1">
+															@foreach (var tag in request.Tags)
+															{
+																<span class="badge badge-primary badge-outline">@tag</span>
+															}
+														</div>
+													</div>
+												}
+															<div class="mt-3 flex gap-6">
+													<div>
+														<p class="text-sm text-gray-500">Amount</p>
+														<p class="font-bold">RM @request.TotalAmount.ToString("F2")</p>
+													</div>
+												</div>
+
+												<div class="mt-4 flex gap-2">
+													@if (request.Status == requestStatus.requested)
+													{
+														<label for="cancelRequestModal" class="btn btn-outline btn-sm btn-error" onclick="document.getElementById('cancelRequestIdValue').value = '@request.RId'">Cancel</label>
+													}
+													<a href="/CommissionPlans/request/@request.RId" class="btn btn-sm btn-primary w-30 text-white">Details</a>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							}
+						</div>
+					}
+					else
+					{
+						<div class="text-center py-8 text-gray-500">
+							<p>No sent requests yet</p>
+						</div>
+					}
+				</div>
+			}
+			else
+			{
+				<input type="radio" name="request_tabs" role="tab" class="tab font-medium" aria-label="Sent Requests" checked />
+				<div role="tabpanel" class="tab-content p-6">
+					@if (Model.SentRequests.Any())
+					{
+						<div class="space-y-4">
+							@foreach (var request in Model.SentRequests)
+							{
+								@switch (request.Status)
+								{
+									case requestStatus.cancelled:
+									case requestStatus.rejected:
+										badgeStyle = "badge-error";
+										break;
+									case requestStatus.approved:
+									case requestStatus.drafted:
+										badgeStyle = "badge-info";
+										break;
+									case requestStatus.requested:
+										badgeStyle = "badge-warning";
+										break;
+									case requestStatus.completed:
+										badgeStyle = "badge-success";
+										break;
+									default:
+										badgeStyle = "badge-neutral";
+										break;
+								}
+
+								<div class="card bg-base-100 shadow-md request-card" data-status="@EnumService.GetEnumDisplayName(request.Status)">
+									<div class="card-body">
+										<div class="flex gap-4">
+											<div class="avatar w-16 h-16 flex-shrink-0">
+												<div class="rounded-full">
+													@if (!string.IsNullOrEmpty(request.UserProfilePic))
+													{
+														<img src="@request.UserProfilePic" alt="@request.UserName" width="64" height="64" loading="lazy" decoding="async" />
+													}
+													else
+													{
+														<img src="/images/blank_profile.webp" alt="@request.UserName" width="64" height="64" loading="lazy" decoding="async" />
+													}
+												</div>
+											</div>
+
+											<div class="flex-1">
+												<div class="flex justify-between items-start">
+													<div>
+														<h3 class="font-bold text-lg">@request.UserName</h3>
+														<p class="text-sm text-gray-500">Commission: <span class="font-semibold">@request.PlanTitle</span></p>
+														<p class="text-sm text-gray-500">Sent: @request.RequestDate.ToString("MMM dd, yyyy HH:mm")</p>
+														@if (request.Deadline.HasValue && request.Deadline > DateTime.MinValue)
+														{
+															<p class="text-sm text-gray-500">Deadline: <span class="font-semibold">@request.Deadline.Value.ToString("MMM dd, yyyy")</span></p>
+														}
+													</div>
+													<div class="flex flex-col gap-2 items-end">
+														<div class="badge badge-outline @badgeStyle">
+															@EnumService.GetEnumDisplayName(request.Status)
+														</div>
+														@if (request.PaymentStatus == paymentStatus.refunded)
+														{
+															<div class="badge badge-outline @badgeStyle">
+																@EnumService.GetEnumDisplayName(request.PaymentStatus)
+															</div>
+														}
+													</div>
+												</div>
+
+												<div class="mt-3">
+													<p class="text-sm"><strong>Description:</strong> @request.RequestDescription</p>
+												</div>
+
+												@if (request.Tags != null && request.Tags.Any())
+												{
+													<div class="mt-3">
+														<p class="text-sm"><strong>Tags:</strong></p>
+														<div class="flex flex-wrap gap-2 mt-1">
+															@foreach (var tag in request.Tags)
+															{
+																<span class="badge badge-primary badge-outline">@tag</span>
+															}
+														</div>
+													</div>
+												}
+
+												<div class="mt-3 flex gap-6">
+													<div>
+														<p class="text-sm text-gray-500">Amount</p>
+														<p class="font-bold">RM @request.TotalAmount.ToString("F2")</p>
+													</div>
+												</div>
+
+												<div class="mt-4 flex gap-2">
+													@if (request.Status == requestStatus.requested)
+													{
+														<label for="cancelRequestModal" class="btn btn-outline btn-sm btn-error" onclick="document.getElementById('cancelRequestIdValue').value = '@request.RId'">Cancel</label>
+													}
+													<a href="/CommissionPlans/request/@request.RId" class="btn btn-sm btn-primary w-30 text-white">Details</a>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							}
+						</div>
+					}
+					else
+					{
+						<div class="text-center py-8 text-gray-500">
+							<p>No sent requests yet</p>
+						</div>
+					}
+				</div>
+			}
+		</div>
+	</div>
+</div>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		const statusFilter = document.getElementById('statusFilter');
+		const requestCards = document.querySelectorAll('.request-card');
+
+		statusFilter.addEventListener('change', function () {
+			const selectedStatus = this.value.toLowerCase();
+
+			requestCards.forEach(card => {
+				const cardStatus = card.getAttribute('data-status').toLowerCase();
+
+				if (selectedStatus === '' || cardStatus === selectedStatus) {
+					card.style.display = 'block';
+				} else {
+					card.style.display = 'none';
+				}
+			});
+		});
+	});
+</script>
+
+<!-- Cancel Request Modal (outside loop) -->
+<input type="checkbox" id="cancelRequestModal" class="modal-toggle" />
+<div class="modal">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg">Cancel Request</h3>
+		<p class="py-4">Are you sure you want to cancel this request? This will mark your request as cancelled and the payment as refunded.</p>
+		<div class="modal-action">
+			<form id="cancelRequestForm" asp-controller="CommissionPlans" asp-action="CancelRequest" method="post">
+				@Html.AntiForgeryToken()
+				<input type="hidden" name="rId" id="cancelRequestIdValue" value="" />
+				<button type="submit" class="btn btn-error">Yes, Cancel</button>
+			</form>
+			<label for="cancelRequestModal" class="btn">No, Keep</label>
+		</div>
+	</div>
+</div>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		const statusFilter = document.getElementById('statusFilter');
+		const requestCards = document.querySelectorAll('.request-card');
+
+		statusFilter.addEventListener('change', function () {
+			const selectedStatus = this.value.toLowerCase();
+
+			requestCards.forEach(card => {
+				const cardStatus = card.getAttribute('data-status').toLowerCase();
+
+				if (selectedStatus === '' || cardStatus === selectedStatus) {
+					card.style.display = 'block';
+				} else {
+					card.style.display = 'none';
+				}
+			});
+
+			// Check if all cards are hidden for the current tab
+			const visibleCards = Array.from(requestCards).filter(card => card.style.display !== 'none');
+			if (visibleCards.length === 0 && selectedStatus !== '') {
+				const noRequestsMsg = document.createElement('div');
+				noRequestsMsg.className = 'text-center py-8 text-gray-500';
+				noRequestsMsg.innerHTML = '<p>No requests match the selected status</p>';
+			}
+		});
+	});
+</script>
+
+<!-- Decline Request Modal (outside loop) -->
+<input type="checkbox" id="declineRequestModal" class="modal-toggle" />
+<div class="modal">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg">Decline Request</h3>
+		<p class="py-4">Are you sure you want to decline this request? This will mark the payment as refunded.</p>
+		<div class="modal-action">
+			<form id="declineRequestForm" asp-controller="CommissionPlans" asp-action="DeclineRequest" method="post">
+				@Html.AntiForgeryToken()
+				<input type="hidden" name="rId" id="declineRequestIdValue" value="" />
+				<button type="submit" class="btn btn-error">Yes, Decline</button>
+			</form>
+			<label for="declineRequestModal" class="btn">No, Keep</label>
+		</div>
+	</div>
+</div>

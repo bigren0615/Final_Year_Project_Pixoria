@@ -1,0 +1,196 @@
+@model Final_Year_Project.Models.FraudDetection.FraudStatisticsViewModel
+@{
+    ViewData["Title"] = "Fraud Detection Statistics";
+    Layout = "_AdminLayout";
+}
+
+<div class="min-h-screen bg-pink-50 flex flex-col p-6 space-y-8">
+    <!-- Back Button -->
+    <div>
+        <a href="/ArtworkFraudDetection/ScanAndMonitor" class="btn btn-outline btn-sm">
+            ← Back to Scan & Monitor
+        </a>
+    </div>
+
+    <!-- Page Title -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-700">Fraud Detection Statistics</h1>
+        <a href="/ArtworkFraudDetection/GenerateReport" class="btn btn-primary">
+            Generate Full Report
+        </a>
+    </div>
+
+    <!-- Key Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Total Scanned</p>
+                    <p class="text-4xl font-bold text-gray-700">@Model.TotalScanned</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-2xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Flagged Posts</p>
+                    <p class="text-4xl font-bold text-red-500">@Model.TotalFlagged</p>
+                    <p class="text-xs text-gray-400">@Model.FlaggedPercentage.ToString("F1")% of total</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-2xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Resolved Cases</p>
+                    <p class="text-4xl font-bold text-green-500">@(Model.TotalVerified + Model.TotalRejected)</p>
+                    <p class="text-xs text-gray-400">@Model.ResolvedPercentage.ToString("F1")% resolution rate</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-2xl shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Rejection Rate</p>
+                    <p class="text-4xl font-bold text-orange-500">@Model.RejectionRate.ToString("F1")%</p>
+                    <p class="text-xs text-gray-400">@Model.TotalRejected rejections</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Breakdown -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Status Distribution -->
+        <div class="bg-white rounded-2xl shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Status Distribution</h2>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Flagged</span>
+                        <span class="font-semibold">@Model.TotalFlagged</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="bg-red-500 h-4 rounded-full" style="width: @(Model.TotalScanned > 0 ? (Model.TotalFlagged * 100.0 / Model.TotalScanned).ToString("F0") : "0")%"></div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Under Review</span>
+                        <span class="font-semibold">@Model.TotalUnderReview</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="bg-yellow-500 h-4 rounded-full" style="width: @(Model.TotalScanned > 0 ? (Model.TotalUnderReview * 100.0 / Model.TotalScanned).ToString("F0") : "0")%"></div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Verified (Safe)</span>
+                        <span class="font-semibold">@Model.TotalVerified</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full" style="width: @(Model.TotalScanned > 0 ? (Model.TotalVerified * 100.0 / Model.TotalScanned).ToString("F0") : "0")%"></div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Rejected (Fraud)</span>
+                        <span class="font-semibold">@Model.TotalRejected</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="bg-gray-500 h-4 rounded-full" style="width: @(Model.TotalScanned > 0 ? (Model.TotalRejected * 100.0 / Model.TotalScanned).ToString("F0") : "0")%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detection Types -->
+        <div class="bg-white rounded-2xl shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Detection Types</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-purple-50 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-bold text-purple-600">@Model.AiGeneratedCount</p>
+                    <p class="text-sm text-gray-500">AI-Generated Detected</p>
+                </div>
+                <div class="bg-blue-50 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-bold text-blue-600">@Model.PlagiarismCount</p>
+                    <p class="text-sm text-gray-500">Plagiarism Detected</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Activity Chart -->
+    <div class="bg-white rounded-2xl shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-700 mb-4">Daily Activity (Last 30 Days)</h2>
+        <div class="overflow-x-auto">
+            <div class="flex gap-1 items-end h-48 min-w-max">
+                @foreach (var stat in Model.DailyStats)
+                {
+                    var maxHeight = 180;
+                    var maxScanned = Math.Max(1, Model.DailyStats.Max(s => s.Scanned));
+                    var maxFlagged = Math.Max(1, Model.DailyStats.Max(s => s.Flagged));
+                    var scannedHeight = maxScanned > 0 
+                        ? (int)(stat.Scanned * maxHeight / maxScanned)
+                        : 0;
+                    var flaggedHeight = maxFlagged > 0
+                        ? (int)(stat.Flagged * maxHeight / maxFlagged)
+                        : 0;
+                    
+                    <div class="flex flex-col items-center gap-1" title="@stat.Date.ToString("MMM dd"): @stat.Scanned scanned, @stat.Flagged flagged">
+                        <div class="flex gap-px items-end">
+                            <div class="w-2 bg-blue-400 rounded-t" style="height: @(Math.Max(2, scannedHeight))px"></div>
+                            <div class="w-2 bg-red-400 rounded-t" style="height: @(Math.Max(1, flaggedHeight))px"></div>
+                        </div>
+                        <span class="text-xs text-gray-400 -rotate-45 origin-top-left w-8">@stat.Date.ToString("dd")</span>
+                    </div>
+                }
+            </div>
+            <div class="flex gap-4 mt-4 text-sm">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-blue-400 rounded"></div>
+                    <span>Scanned</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-red-400 rounded"></div>
+                    <span>Flagged</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Flagged Posts -->
+    <div class="bg-white rounded-2xl shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-700 mb-4">Recent Flagged Posts</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            @foreach (var post in Model.RecentFlaggedArtworks)
+            {
+                <a href="/ArtworkFraudDetection/ReviewArtwork/@post.FraudId" 
+                   class="bg-gray-50 rounded-xl p-3 hover:shadow-lg transition-shadow">
+                    <img src="@post.ImageUrl" alt="@post.PostTitle" 
+                         class="w-full h-32 object-cover rounded-lg mb-2" />
+                    <p class="font-semibold text-sm truncate">@post.PostTitle</p>
+                    <p class="text-xs text-gray-500">@post.ArtistName</p>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="badge badge-sm @(post.FraudRisk == "high" ? "badge-error" : post.FraudRisk == "medium" ? "badge-warning" : "badge-info")">
+                            @post.FraudRisk
+                        </span>
+                        <span class="text-xs text-gray-400">@post.FlaggedAt.ToString("MMM dd")</span>
+                    </div>
+                </a>
+            }
+            @if (!Model.RecentFlaggedArtworks.Any())
+            {
+                <div class="col-span-full text-center text-gray-500 py-8">
+                    No flagged posts found
+                </div>
+            }
+        </div>
+    </div>
+</div>

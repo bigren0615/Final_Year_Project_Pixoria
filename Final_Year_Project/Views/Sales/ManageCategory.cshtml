@@ -1,0 +1,95 @@
+﻿@model Final_Year_Project.Models.Sales.ManageCategoryVM;
+
+<div class="flex min-h-screen bg-gray-100">
+
+    @await Html.PartialAsync("_SellerCenterSidebar")
+
+    <main class="flex-1 p-8">
+
+        <h2 class="text-2xl font-bold text-pink-500 mb-6">Manage Categories & Subcategories</h2>
+
+        <div class="bg-white border p-4 rounded-xl shadow mb-8">
+            <h3 class="text-xl font-semibold mb-4">Add Category</h3>
+
+            <form asp-action="AddCategory" method="post" class="flex gap-3">
+                <input name="categoryName"
+                       class="border p-2 flex-1 rounded"
+                       placeholder="Enter new category name" />
+
+                <button class="bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600">
+                    Add Category
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white border p-4 rounded-xl shadow">
+            <h3 class="text-xl font-semibold mb-4">Add Subcategory</h3>
+
+            <form asp-action="AddSubCategory" method="post" class="space-y-4">
+
+                <div>
+                    <label class="block mb-1">Select Category</label>
+                    <select name="catId" class="border p-2 rounded w-full">
+                        <option value="">-- Select Category --</option>
+                        @foreach (var c in Model.Categories)
+                        {
+                            <option value="@c.CatId">@c.CategoryName</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block mb-1">Subcategory Name</label>
+                    <input name="subCategoryName"
+                           class="border p-2 w-full rounded"
+                           placeholder="Enter subcategory name" />
+                </div>
+
+                <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Add Subcategory
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white border p-6 rounded-xl shadow mt-8">
+            <h3 class="text-2xl font-bold mb-6 text-gray-800">Available Categories & Subcategories</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach (var cat in Model.Categories)
+                {
+                    <div class="border rounded-xl p-4 shadow-sm hover:shadow-md transition bg-gray-50">
+                        <h4 class="font-semibold text-pink-600 text-lg mb-2">
+                            @cat.CategoryName
+                        </h4>
+
+                        <div class="pl-2">
+                            @{
+                                var subs = Model.SubCategories
+                                .Where(sc => sc.CatId == cat.CatId)
+                                .ToList();
+                            }
+
+                            @if (!subs.Any())
+                            {
+                                <p class="text-gray-400 italic text-sm">No subcategories yet</p>
+                            }
+                            else
+                            {
+                                <ul class="space-y-1 text-gray-700 text-sm">
+                                    @foreach (var sc in subs)
+                                    {
+                                        <li class="flex items-center gap-2">
+                                            <span class="w-2 h-2 bg-pink-400 rounded-full"></span>
+                                            @sc.SubCategoryName
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+    </main>
+</div>

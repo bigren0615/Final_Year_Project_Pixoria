@@ -1,0 +1,97 @@
+﻿<div class="mt-10 mx-5">
+	@if (Model.SubscriptionPlans.Count == 0)
+	{
+		<section class="card shadow-md bg-base-100">
+			<div class="card-body">
+				<div class="flex flex-col items-center justify-center text-center py-16 rounded-box">
+					<div class="text-gray-500 text-lg">No subscription plans.</div>
+					@if (Model.IsOwner)
+					{
+						<a href="/SubscriptionPlans/add" class="btn btn-primary mt-4 text-white">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+								 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+								<path d="M8 4v8M4 8h8"
+									  stroke="currentColor" stroke-width="2.5"
+									  stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+							Add Plan Now
+						</a>
+					}
+				</div>
+			</div>
+		</section>
+	}
+	else
+	{
+		<div id="plans-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+			@foreach (var plan in Model.SubscriptionPlans!)
+			{
+				<div class="card bg-base-100 border border-base-200 shadow-md overflow-hidden">
+					@if (!string.IsNullOrEmpty(plan.ImageUrl))
+					{
+						<figure class="h-50 overflow-hidden">
+							<img src="@plan.ImageUrl" alt="@plan.Title" loading="lazy" class="w-full h-full object-cover" />
+						</figure>
+					}
+
+					<div class="card-body p-5">
+						<h3 class="card-title text-lg font-semibold line-clamp-1">
+							@plan.Title
+						</h3>
+						<p class="text-sm text-base-content/70 line-clamp-5 whitespace-pre-line">@Html.Raw(Html.Encode(plan.Description).Replace("\n", "<br>"))</p>
+						<div class="divider"></div>
+						<div class="mt-auto">
+							<p class="text-xl font-bold text-center">RM @(plan.Price.ToString("0.00"))/ Month</p>
+						</div>
+
+						@if (Model.IsOwner)
+						{
+							<div class="mt-4">
+								<a href="/SubscriptionPlans/@plan.SPId/edit" class="btn btn-outline btn-primary btn-md w-full">
+									Edit Plan
+								</a>
+							</div>
+						}
+						else
+						{
+							<div class="mt-4">
+								@if (plan.Subscribed)
+								{
+									<a href="/SubscriptionPlans/@plan.SPId" class="btn btn-outline btn-primary btn-md w-full">
+										Update subscribe status
+									</a>
+								}
+								else
+								{
+
+									<a href="/SubscriptionPlans/@plan.SPId" class="btn btn-primary btn-md w-full text-white">
+										Subscribe
+									</a>
+								}
+							</div>
+						}
+					</div>
+				</div>
+			}
+		</div>
+
+
+		@if (Model.IsOwner)
+		{
+			<div class="flex justify-center mt-8">
+				<a href="/SubscriptionPlans/add" class="btn btn-primary text-white">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+						 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+						<path d="M8 4v8M4 8h8"
+							  stroke="currentColor" stroke-width="2.5"
+							  stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+					Add Plan
+				</a>
+			</div>
+		}
+
+		<!-- Infinite Scroll Sentinel -->
+		<div id="infinite-scroll-sentinel" style="height: 1px;"></div>
+	}
+</div>

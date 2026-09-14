@@ -1,0 +1,298 @@
+﻿@using Final_Year_Project.Models.Posts
+@model List<HomePostItemVM>
+
+@{
+    ViewData["Title"] = "Posts";
+    var currentPage = (int)ViewData["CurrentPage"]!;
+    var totalPages = (int)ViewData["TotalPages"]!;
+    var pageSize = (int)ViewData["PageSize"]!;
+    var searchQuery = (string?)ViewData["SearchQuery"];
+    var matchedArtistCount = (int?)ViewData["MatchedArtistCount"] ?? 0;
+    var currentFilter = (string?)ViewData["CurrentFilter"] ?? "all";
+    var isAuthenticated = (bool)ViewData["IsAuthenticated"]!;
+}
+
+<div class="min-h-screen bg-gradient-to-b from-base-100 to-base-200">
+    <div class="bg-base-100 border-b border-base-300 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="mb-4">
+                <form method="get" class="relative" id="searchForm">
+                    <div class="flex gap-2">
+                        <div class="flex-1 relative">
+                            <input type="text" 
+                                name="search" 
+                                id="searchInput"
+                                placeholder="Search posts or artists, or use #tag for tags..." 
+                                   value="@searchQuery"
+                                   class="input input-bordered w-full pl-10 rounded-lg"
+                                   autocomplete="off" />
+                            <svg class="absolute left-3 top-3 w-5 h-5 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <!-- Tag suggestions dropdown -->
+                            <div id="tagSuggestions" class="absolute z-50 w-full mt-1 bg-base-100 rounded-lg shadow-lg border border-base-300 hidden max-h-60 overflow-y-auto"></div>
+                        </div>
+                        <input type="hidden" name="filter" value="@currentFilter" />
+                        <input type="hidden" name="page" value="1" />
+                        <button type="submit" class="btn btn-primary rounded-lg">Search</button>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        @if (searchQuery.StartsWith("#"))
+                        {
+                            <div class="text-sm text-base-content/60 mt-2">
+                                <span class="badge badge-primary badge-sm mr-1">Tag Search</span>
+                                Searching for posts with tag: <strong class="text-primary">@searchQuery</strong>
+                            </div>
+                        }
+                        else if (matchedArtistCount > 0)
+                        {
+                            <div class="text-sm text-base-content/60 mt-2">Found <strong>@matchedArtistCount</strong> artist(s) matching "@searchQuery"</div>
+                        }
+                    }
+                </form>
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto pb-2">
+                <a href="?filter=all&page=1@(!string.IsNullOrWhiteSpace(searchQuery) ? $"&search={searchQuery}" : "")" 
+                   class="btn btn-sm @(currentFilter == "all" ? "btn-primary" : "btn-ghost") rounded-full whitespace-nowrap">
+                    All Posts
+                </a>
+                @if (isAuthenticated)
+                {
+                    <a href="?filter=followed&page=1@(!string.IsNullOrWhiteSpace(searchQuery) ? $"&search={searchQuery}" : "")" 
+                       class="btn btn-sm @(currentFilter == "followed" ? "btn-primary" : "btn-ghost") rounded-full whitespace-nowrap">
+                        Following
+                    </a>
+                    <a href="?filter=subscribed&page=1@(!string.IsNullOrWhiteSpace(searchQuery) ? $"&search={searchQuery}" : "")" 
+                       class="btn btn-sm @(currentFilter == "subscribed" ? "btn-primary" : "btn-ghost") rounded-full whitespace-nowrap">
+                        Subscribed
+                    </a>
+                    <a href="?filter=both&page=1@(!string.IsNullOrWhiteSpace(searchQuery) ? $"&search={searchQuery}" : "")" 
+                       class="btn btn-sm @(currentFilter == "both" ? "btn-primary" : "btn-ghost") rounded-full whitespace-nowrap">
+                        Following & Subscribed
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        @if (Model.Count == 0)
+        {
+            <div class="flex flex-col items-center justify-center py-16">
+                <svg class="w-16 h-16 text-base-content/20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                <h3 class="text-xl font-semibold text-base-content/60 mb-2">No posts found</h3>
+                <p class="text-base-content/40 mb-6">@(string.IsNullOrWhiteSpace(searchQuery) ? "Try adjusting your filters or check back later" : "Try a different search query")</p>
+                <a href="/Posts" class="btn btn-primary rounded-lg">Clear Filters</a>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                @foreach (var post in Model)
+                {
+                    <div class="break-inside-avoid">
+                        <a href="/Posts/@post.PostId" class="card bg-base-100 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer h-full">
+                            <figure class="relative overflow-hidden bg-gradient-to-br from-base-300 to-base-200 aspect-square">
+                                <img src="@post.CoverImageUrl" 
+                                     alt="@post.Title" 
+                                     class="w-full h-full object-cover" />
+                                
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent opacity-0 flex flex-col justify-end p-3">
+                                    <p class="text-white text-sm font-semibold line-clamp-2">@post.Title</p>
+                                </div>
+                            </figure>
+
+                            <div class="card-body p-3">
+                                <h3 class="font-bold text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                                    @post.Title
+                                </h3>
+                                <p class="text-xs text-base-content/60 font-semibold mt-1">
+                                    @(string.IsNullOrEmpty(post.PlanName) ? "All User" : $"{post.PlanName} - RM {post.Price?.ToString("F2")}")
+                                </p>
+
+                                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-base-300">
+                                    <div class="avatar w-7 h-7 flex-shrink-0">
+                                        <div class="rounded-full bg-base-300">
+                                            @if (!string.IsNullOrEmpty(post.ArtistProfilePic))
+                                            {
+                                                <img src="@post.ArtistProfilePic" alt="@post.ArtistName" />
+                                            }
+                                            else
+                                            {
+                                                <img src="/images/blank_profile.webp" alt="@post.ArtistName" />
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-xs font-semibold text-base-content/80 truncate">
+                                            @post.ArtistName
+                                        </p>
+                                        <p class="text-xs text-base-content/50">@post.CreatedAt.ToString("MMM dd, yyyy")</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+
+            @if (totalPages > 1)
+            {
+                <div class="flex justify-center items-center gap-2 mt-12">
+                    @if (currentPage > 1)
+                    {
+                        <a href="?page=@(currentPage - 1)&filter=@currentFilter&search=@searchQuery" 
+                           class="btn btn-sm btn-ghost rounded-lg">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-ghost rounded-lg opacity-50 cursor-not-allowed" disabled>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                    }
+
+                    <div class="flex gap-1">
+                        @{
+                            int startPage = Math.Max(1, currentPage - 2);
+                            int endPage = Math.Min(totalPages, currentPage + 2);
+                        }
+
+                        @if (startPage > 1)
+                        {
+                            <a href="?page=1&filter=@currentFilter&search=@searchQuery" 
+                               class="btn btn-sm btn-ghost rounded-lg">1</a>
+                            @if (startPage > 2)
+                            {
+                                <span class="flex items-center px-2">...</span>
+                            }
+                        }
+
+                        @for (int i = startPage; i <= endPage; i++)
+                        {
+                            @if (i == currentPage)
+                            {
+                                <button class="btn btn-sm btn-primary rounded-lg">@i</button>
+                            }
+                            else
+                            {
+                                <a href="?page=@i&filter=@currentFilter&search=@searchQuery" 
+                                   class="btn btn-sm btn-ghost rounded-lg">@i</a>
+                            }
+                        }
+
+                        @if (endPage < totalPages)
+                        {
+                            @if (endPage < totalPages - 1)
+                            {
+                                <span class="flex items-center px-2">...</span>
+                            }
+                            <a href="?page=@totalPages&filter=@currentFilter&search=@searchQuery" 
+                               class="btn btn-sm btn-ghost rounded-lg">@totalPages</a>
+                        }
+                    </div>
+
+                    @if (currentPage < totalPages)
+                    {
+                        <a href="?page=@(currentPage + 1)&filter=@currentFilter&search=@searchQuery" 
+                           class="btn btn-sm btn-ghost rounded-lg">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-ghost rounded-lg opacity-50 cursor-not-allowed" disabled>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    }
+                </div>
+
+                <div class="text-center mt-4 text-sm text-base-content/60">
+                    Page <span class="font-semibold">@currentPage</span> of <span class="font-semibold">@totalPages</span>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<script>
+    // Tag autocomplete functionality
+    (function() {
+        const searchInput = document.getElementById('searchInput');
+        const suggestionsDiv = document.getElementById('tagSuggestions');
+        let debounceTimer;
+        
+        if (!searchInput || !suggestionsDiv) return;
+        
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(debounceTimer);
+            const value = e.target.value.trim();
+            
+            // Only show suggestions if input starts with #
+            if (!value.startsWith('#') || value.length < 2) {
+                suggestionsDiv.classList.add('hidden');
+                return;
+            }
+            
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/Posts/SuggestTags?query=${encodeURIComponent(value)}`);
+                    const data = await response.json();
+                    
+                    if (data.tags && data.tags.length > 0) {
+                        suggestionsDiv.innerHTML = data.tags.map(tag => 
+                            `<div class="px-4 py-2 hover:bg-base-200 cursor-pointer border-b border-base-300 last:border-b-0" data-tag="${tag}">
+                                <span class="text-primary">#</span>${tag}
+                            </div>`
+                        ).join('');
+                        suggestionsDiv.classList.remove('hidden');
+                    } else {
+                        suggestionsDiv.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch tag suggestions:', error);
+                    suggestionsDiv.classList.add('hidden');
+                }
+            }, 300);
+        });
+        
+        // Handle suggestion click
+        suggestionsDiv.addEventListener('click', function(e) {
+            const suggestionItem = e.target.closest('[data-tag]');
+            if (suggestionItem) {
+                const tag = suggestionItem.getAttribute('data-tag');
+                searchInput.value = '#' + tag;
+                suggestionsDiv.classList.add('hidden');
+                // Optionally submit the form
+                document.getElementById('searchForm').submit();
+            }
+        });
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.classList.add('hidden');
+            }
+        });
+        
+        // Handle keyboard navigation
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                suggestionsDiv.classList.add('hidden');
+            }
+        });
+    })();
+</script>

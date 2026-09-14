@@ -1,0 +1,192 @@
+﻿@using Final_Year_Project.Enums
+@inject Final_Year_Project.Services.EnumService EnumService
+<div class="mt-10 mx-5">
+	@if (Model.Role == usersRole.artist)
+	{
+		<section class="card shadow-md bg-base-100">
+			<div class="card-body">
+				@if (Model.Artworks.Count == 0)
+				{
+					@if (Model.IsOwner)
+					{
+						<div class="flex flex-col items-center justify-center text-center py-16 rounded-box">
+							<a href="/Profile/@Model.UserId/edit" class="btn btn-primary mt-4 text-white">
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+									 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+									<path d="M8 4v8M4 8h8"
+										  stroke="currentColor" stroke-width="2.5"
+										  stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+								Upload Your First Artwork
+							</a>
+						</div>
+					}
+				}
+				else
+				{
+					<div class="relative">
+						<button type="button"
+								class="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 hover:bg-white text-gray-700 rounded-full shadow p-2 hidden sm:block cursor-pointer"
+								onclick="scrollGallery('left')">
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+							</svg>
+						</button>
+
+						<div id="artworkGallery" class="flex gap-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory scroll-smooth">
+							@foreach (var art in Model.Artworks)
+							{
+								<div class="relative group flex-shrink-0 snap-center w-48 sm:w-56 md:w-64 lg:w-72">
+									<label for="artwork-modal-@art.ProfArtid" class="cursor-pointer block aspect-square overflow-hidden rounded-sm bg-base-100">
+										<img src="@art.ImageUrl"
+											 alt="Artwork"
+											 loading="lazy"
+											 class="w-full h-full object-cover object-top select-none" />
+									</label>
+
+									<input type="checkbox" id="artwork-modal-@art.ProfArtid" class="modal-toggle" />
+									<div class="modal">
+										<div class="modal-box p-0 bg-base-100 shadow-none max-w-none w-auto h-auto overflow-hidden"
+											 style="border-radius: 0 !important;">
+											<label for="artwork-modal-@art.ProfArtid" class="btn btn-sm btn-circle absolute right-3 top-3">✕</label>
+											<img src="@art.ImageUrl"
+												 alt="Artwork Full"
+												 loading="lazy"
+												 class="w-full h-auto max-h-[80vh] object-contain bg-base-200" />
+										</div>
+										<label class="modal-backdrop" for="artwork-modal-@art.ProfArtid"></label>
+									</div>
+								</div>
+							}
+						</div>
+
+						<button type="button"
+								class="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 hover:bg-white text-gray-700 rounded-full shadow p-2 hidden sm:block cursor-pointer"
+								onclick="scrollGallery('right')">
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+							</svg>
+						</button>
+					</div>
+				}
+				<div class="space-y-3">
+					@if (!string.IsNullOrWhiteSpace(Model.AboutMe))
+					{
+						<p class="text-gray-600 leading-relaxed whitespace-pre-line">@Html.Raw(Html.Encode(Model.AboutMe).Replace("\n", "<br>"))</p>
+					}
+				</div>
+			</div>
+		</section>
+		<div class="flex flex-col lg:flex-row gap-6 max-w-10xl w-full mt-5">
+			<div class="flex-2">
+				@if (Model.LatestPosts.Count != 0)
+				{
+					<h2 class="text-2xl font-bold mb-4">Latest Posts</h2>
+					foreach (var p in Model.LatestPosts)
+					{
+						<a href="/Posts/@p.PostId" class="block group mt-5">
+							<div class="card bg-base-100 border border-base-200 shadow-md overflow-hidden">
+								<figure class="h-100 overflow-hidden">
+									@if (!string.IsNullOrEmpty(p.CoverImageUrl))
+									{
+										<img src="@p.CoverImageUrl" alt="@p.Title" loading="lazy" class="w-full h-full object-cover" />
+									}
+									else
+									{
+										<img src="/images/no_image.jpg" alt="@p.Title" loading="lazy" class="w-full h-full object-cover" />
+									}
+								</figure>
+								<div class="card-body p-4 flex flex-col">
+									<h3 class="card-title text-xl font-semibold line-clamp-1">
+										@p.Title
+									</h3>
+									@if (p.Price != null && p.Price >= 0)
+									{
+										<p class="text-gray-500 h-18 text-sm font-medium">
+											RM @p.Price.ToString("F2")
+										</p>
+									}
+									else
+									{
+										<p class="text-gray-500 h-18 text-sm font-medium">
+											All User
+										</p>
+									}
+									<p class="text-xs text-gray-400 text-left">
+										@p.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")
+									</p>
+								</div>
+							</div>
+						</a>
+					}
+					<div class="flex justify-center mt-8">
+						<a href="/Profile/2/posts" class="btn btn-primary text-white flex items-center gap-2">
+							View all post
+						</a>
+					</div>
+				}
+			</div>
+			<div class="flex-1">
+				@if (Model.SubscriptionPlans.Count != 0)
+				{
+					<h2 class="text-2xl font-bold mb-4">Subscription Plans</h2>
+					@foreach (var plan in Model.SubscriptionPlans)
+					{
+						<div class="card bg-base-100 shadow-md mt-5">
+							@if (!string.IsNullOrEmpty(plan.ImageUrl))
+							{
+								<figure class="h-50 overflow-hidden">
+									<img src="@plan.ImageUrl" alt="@plan.Title" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+								</figure>
+							}
+
+							<div class="card-body p-5">
+								<h3 class="card-title text-lg font-semibold line-clamp-1">
+									@plan.Title
+								</h3>
+								<p class="text-sm text-base-content/70 line-clamp-5 whitespace-pre-line">@Html.Raw(Html.Encode(plan.Description).Replace("\n", "<br>"))</p>
+								<div class="divider"></div>
+								<div class="mt-auto">
+									<p class="text-xl font-bold text-center">RM @(plan.Price.ToString("0.00"))/ Month</p>
+								</div>
+
+								@if (!Model.IsOwner)
+								{
+									@if (plan.Subscribed)
+									{
+										<div class="mt-4">
+											<a href="/SubscriptionPlans/@plan.SPId" class="btn btn-outline btn-primary btn-md w-full">
+												Update subscribe status
+											</a>
+										</div>
+									}
+									else
+									{
+										<div class="mt-4">
+											<a href="/SubscriptionPlans/@plan.SPId" class="btn btn-primary btn-md w-full text-white">
+												Subscribe
+											</a>
+										</div>
+									}
+								}
+							</div>
+						</div>
+					}
+				}
+			</div>
+		</div>
+	}
+	else if (Model.Role == usersRole.customer)
+	{
+		<section class="card shadow-md bg-base-100">
+			<div class="card-body">
+				<div class="flex flex-col items-center justify-center text-center py-16 rounded-box">
+					Wanna let everyone know your art?
+					<a href="/Artist/register" class="btn btn-primary mt-4 text-white">
+						Become a creator
+					</a>
+				</div>
+			</div>
+		</section>
+	}
+</div>

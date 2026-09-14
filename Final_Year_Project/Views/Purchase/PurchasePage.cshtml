@@ -1,0 +1,125 @@
+﻿@using X.PagedList
+@model Final_Year_Project.Models.Product.ProductFilterViewModel
+
+<h2 class="text-center text-3xl font-semibold text-gray-800 mb-8">
+    Products for Sale
+</h2>
+
+<div class="max-w-7xl mx-2 flex flex-col md:flex-row gap-8 px-4">
+    <aside class="w-full md:w-1/4 bg-white rounded-lg shadow p-5 h-fit">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Filter By</h3>
+
+        <form asp-action="PurchasePage" method="get" id="filterForm" class="space-y-5">
+            <!-- Category -->
+            <div>
+                <label for="catId" class="block text-gray-700 font-medium mb-2">Category</label>
+                <select id="catId" name="catId"
+                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-pink-400 focus:outline-none">
+                    <option value="">-- All Categories --</option>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        if (Model.CatId == cat.CatId)
+                        {
+                            <option value="@cat.CatId" selected>@cat.CategoryName</option>
+                        }
+                        else
+                        {
+                            <option value="@cat.CatId">@cat.CategoryName</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Subcategory -->
+            <div>
+                <label for="subCatId" class="block text-gray-700 font-medium mb-2">Subcategory</label>
+                <select id="subCatId" name="subCatId"
+                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-pink-400 focus:outline-none disabled:bg-gray-100">
+                    <option value="">-- All Subcategories --</option>
+                </select>
+            </div>
+
+            <!-- Search -->
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <input type="search"
+                       name="name"
+                       id="name"
+                       placeholder="Search products..."
+                       value="@Model.Name"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition duration-150" />
+            </div>
+
+            <button type="submit"
+                    class="w-full px-4 py-2 bg-pink-500 text-white font-semibold rounded-lg shadow hover:bg-pink-600 focus:ring-2 focus:ring-pink-400 transition duration-150">
+                Apply Filters
+            </button>
+        </form>
+    </aside>
+
+    <section class="flex-1">
+        <div class="text-gray-700 text-sm mb-4">
+            <span class="font-medium">@Model.Products.TotalItemCount</span> result(s) found
+        </div>
+
+        <div id="purchaseContainer">
+            <partial name="_PurchaseSelection" model="Model.Products" />
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const catSelect = document.getElementById("catId");
+            const subCatSelect = document.getElementById("subCatId");
+            const selectedCatId = '@Model.CatId';
+            const selectedSubCatId = '@Model.SubCatId';
+
+            if (selectedCatId) {
+                await loadSubCategories(selectedCatId, selectedSubCatId);
+            } else {
+                subCatSelect.disabled = true;
+            }
+
+            catSelect.addEventListener("change", async function () {
+                const categoryId = this.value;
+                subCatSelect.innerHTML = "<option value=''>-- All Subcategories --</option>";
+
+                if (!categoryId) {
+                    subCatSelect.disabled = true;
+                    return;
+                }
+
+                await loadSubCategories(categoryId);
+            });
+
+            subCatSelect.addEventListener("change", function () {
+                document.getElementById("filterForm").submit();
+            });
+
+            async function loadSubCategories(catId, selectedSubCatId = null) {
+                try {
+                    const response = await fetch(`@Url.Action("GetSubCategories", "Purchase")?catId=${catId}`);
+                    const data = await response.json();
+
+                    subCatSelect.disabled = false;
+                    subCatSelect.innerHTML = "<option value=''>-- All Subcategories --</option>";
+
+                    data.forEach(item => {
+                        const option = document.createElement("option");
+                        option.value = item.value;
+                        option.textContent = item.text;
+                        if (selectedSubCatId && item.value == selectedSubCatId)
+                            option.selected = true;
+                        subCatSelect.appendChild(option);
+                    });
+                } catch (err) {
+                    console.error("Failed to load subcategories:", err);
+                }
+            }
+        });
+    </script>
+}
+
+

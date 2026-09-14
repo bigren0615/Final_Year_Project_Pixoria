@@ -1,0 +1,53 @@
+﻿@model Final_Year_Project.Models.Profile.BecomeArtistVM
+@{
+	ViewData["Title"] = "Artist Register";
+}
+
+<div class="min-h-screen bg-base-200 flex justify-center">
+	<div class="max-w-4xl w-full mt-10 bg-base-100 card shadow-md">
+		<div class="card-body">
+			<h1 class="text-2xl font-bold text-gray-800 mb-4">Artist Register</h1>
+			@using (Html.BeginForm("BecomeArtist", "Profile", FormMethod.Post, new { enctype = "multipart/form-data" }))
+			{
+				@Html.AntiForgeryToken()
+				<div class="flex flex-col items-center mt-10 space-y-3">
+					<div class="px-6 space-y-6 w-full">
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">Artist Nickname<span class="text-error">*</span></span>
+							</label>
+							<input asp-for="Nickname" class="input input-bordered w-full" />
+							<span asp-validation-for="Nickname" class="text-sm text-red-600"></span>
+						</div>
+
+						<div class="form-control">
+							<label class="label cursor-pointer justify-start gap-3">
+								<input asp-for="AgreeToTerms" class="checkbox checkbox-primary" />
+								<span class="label-text">I agree to the Terms of Use of becoming an artist</span>
+							</label>
+							<div>
+								<span asp-validation-for="AgreeToTerms" class="text-sm text-red-600"></span>
+							</div>
+						</div>
+					</div>
+					<button type="submit" class="btn btn-primary text-white">
+						Become a creator
+					</button>
+				</div>
+
+				@section Scripts {
+					<script>
+						// Client-side adapter for MustBeTrueAttribute validation
+						(function ($) {
+							if (!$ || !$.validator || !$.validator.unobtrusive) return;
+							$.validator.addMethod('mustbetrue', function (value, element, params) {
+								return $(element).is(':checked');
+							});
+							$.validator.unobtrusive.adapters.addBool('mustbetrue');
+						})(window.jQuery);
+					</script>
+				}
+			}
+		</div>
+	</div>
+</div>

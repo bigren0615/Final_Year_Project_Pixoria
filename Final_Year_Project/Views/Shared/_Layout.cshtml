@@ -1,0 +1,238 @@
+﻿@using System.Security.Claims;
+@using Final_Year_Project.Models.DB;
+
+<!DOCTYPE html>
+<html lang="en" data-theme="FYP-light">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"]</title>
+	<meta name="current-user-id" content="@Context.User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier) ?? String.Empty" />
+	<link rel="icon" href="~/images/pixoria_icon.png" type="image/x-icon">
+	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+	<link rel="stylesheet" href="~/css/styles.css" asp-append-version="true" />
+	@RenderSection("Head", required: false)
+</head>
+@{
+	var cartCount = 0;
+	var uidValue = Context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+	var profile = "";
+	var nickname = "";
+	var followerCount = 0;
+	var subscriberCount = 0;
+	if (!string.IsNullOrEmpty(uidValue))
+	{
+		var client = Context.RequestServices.GetRequiredService<Final_Year_Project.Services.SupabaseService>().GetClient();
+		var uid = int.Parse(uidValue);
+
+		var userResponse = await client
+		.From<Users>()
+		.Filter("UId", Supabase.Postgrest.Constants.Operator.Equals, uid)
+		.Get();
+
+		var user = userResponse.Models.FirstOrDefault();
+		profile = user?.ProfilePic ?? "";
+		nickname = user?.Nickname ?? "";
+
+		var cartResponse = await client
+		.From<Cart>()
+		.Filter("Uid", Supabase.Postgrest.Constants.Operator.Equals, uid)
+		.Get();
+		cartCount = cartResponse.Models.Sum(c => c.Quantity);
+
+		// Get follower count if user is an artist
+		if (User.IsInRole("artist"))
+		{
+			var followResponse = await client
+			.From<Final_Year_Project.Models.DB.Follow>()
+			.Filter("artist_id", Supabase.Postgrest.Constants.Operator.Equals, uid)
+			.Get();
+			followerCount = followResponse.Models.Count;
+
+					// Count subscribers for the current artist without changing DB models:
+					// 1) find active subscription plans owned by this artist (SubscriptionPlan.UId == uid)
+					// 2) count active subscriptions whose SPId is in that set
+					var plansResponse = await client
+						.From<Final_Year_Project.Models.DB.SubscriptionPlan>()
+						.Filter("UId", Supabase.Postgrest.Constants.Operator.Equals, uid)
+						.Filter("status", Supabase.Postgrest.Constants.Operator.Equals, "active")
+						.Get();
+ 					var subscriptionService = Context.RequestServices.GetRequiredService<Final_Year_Project.Services.ArtistSubscriptionService>();
+ 					subscriberCount = await subscriptionService.GetSubscriberCountForArtistAsync(uid);
+		}
+	}
+}
+<body>
+	<header>
+		<div class="navbar px-6 py-3">
+			<div class="navbar-start flex items-center gap-4">
+				<a asp-area="" asp-controller="Home" asp-action="Index">
+					<img src="~/images/pixoria.png" alt="Pixoria" class="h-10 w-auto object-contain" />
+				</a>
+			</div>
+
+			<div class="navbar-center lg:flex gap-6">
+				<div class="flex justify-center gap-4 mx-auto">
+					<a href="/Purchase/PurchasePage" class="btn btn-ghost rounded-btn">Shop</a>
+
+					<a href="/Posts" class="btn btn-ghost rounded-btn">Posts</a>
+
+					<a href="/CommissionPlans" class="btn btn-ghost rounded-btn">Commission</a>
+
+					<div class="dropdown dropdown-hover">
+						<label tabindex="0" class="btn btn-ghost rounded-btn">Rewards</label>
+						<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box shadow w-52">
+							<li><a href="/RewardPoint/DailyLogin">Daily Login</a></li>
+							<li><a href="/RewardPoint/VoucherRedemption">Voucher Redemption</a></li>
+						</ul>
+					</div>
+
+					<a href="/CustomerService/ChatSession" class="btn btn-ghost rounded-btn">Customer Service</a>
+				</div>
+			</div>
+
+			<div class="navbar-end flex items-center gap-2">
+				<a href="/Cart/ViewCart" class="btn btn-ghost btn-circle" id="cart-button">
+					<div class="indicator">
+						<span class="indicator-item badge badge-primary">@cartCount</span>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-7">
+							<path stroke-linecap="round" stroke-linejoin="round"
+								  d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+						</svg>
+					</div>
+				</a>
+				<div class="dropdown dropdown-end">
+					<button tabindex="0" class="flex items-center gap-3 cursor-pointer hover:opacity-70 transition-opacity">
+						<div class="avatar w-10 h-10">
+							<div class="rounded-full border border-gray-300">
+								@if (!string.IsNullOrEmpty(profile))
+								{
+									<img src="~/uploads/profile_pic/@profile"/>
+								}
+								else
+								{
+									<img src="~/images/blank_profile.webp"/>
+								}
+							</div>
+						</div>
+
+						@if (User.Identity!.IsAuthenticated)
+						{
+							<div class="flex flex-col text-left">
+								@if (User.IsInRole("artist"))
+								{
+									<span class="font-semibold">@nickname</span>
+								}
+								else
+								{
+									<span class="font-semibold">@User.Identity!.Name</span>
+								}
+
+								<span class="text-xs text-gray-500">@User.FindFirstValue(ClaimTypes.Role)</span>
+							</div>
+						}
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+						</svg>
+					</button>
+					<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box shadow w-60">
+						@if (User.IsInRole("artist"))
+						{
+							<li class="menu-title"><span>@followerCount Followers • @subscriberCount Subscribers</span></li>
+						}
+						@if (User.Identity!.Name != null && User.IsInRole("artist"))
+						{
+							<li><a href="/Profile/@User.FindFirstValue(ClaimTypes.NameIdentifier)">Profile</a></li>
+							<li><a href="/Profile/dashboard">Dashboard</a></li>
+							<li><a href="/CommissionPlans/request">Manage Request</a></li>
+							<li><a href="/Posts/manage">Manage Posts</a></li>
+							<li><a href="/Sales/MainSellerCenter">Seller Center</a></li>
+							<li class="pt-5"><a href="/Profile/Address">Addresses</a></li>
+							<li><a href="/Profile/OrderHistory">Order History</a></li>
+							<li><a href="/Account/setting">Account Setting</a></li>
+							<li class="pt-5"><a href="/Account/Logout">Logout</a></li>
+
+						}
+						else if (User.Identity!.Name != null && User.IsInRole("customer"))
+						{
+							<li><a href="/Profile/@User.FindFirstValue(ClaimTypes.NameIdentifier)">Profile</a></li>
+							<li><a href="/CommissionPlans/request">Manage Request</a></li>
+							<li class="pt-5"><a href="/Profile/Address">Addresses</a></li>
+							<li><a href="/Profile/OrderHistory">Order History</a></li>
+							<li><a href="/Account/setting">Account Setting</a></li>
+							<li><a href="/Artist/register">Become Artist</a></li>
+							<li class="pt-5"><a href="/Account/Logout">Logout</a></li>
+
+						}
+						else if (User.Identity!.Name != null && User.IsInRole("admin"))
+						{
+							<li><a href="/Profile/@User.FindFirstValue(ClaimTypes.NameIdentifier)">Profile</a></li>
+							<li><a href="/Account/Logout">Logout</a></li>
+
+						}
+						else
+						{
+							<li><a href="/Account/Login">Login</a></li>
+							<li><a href="/Account/Register">Register</a></li>
+						}
+
+					</ul>
+				</div>
+			</div>
+		</div>
+	</header>
+	<div>
+		<main>
+			@RenderBody()
+		</main>
+	</div>
+	<footer class="footer footer-center bg-base-200 text-base-content p-4">
+		<aside>
+			<p>
+				©Pixoria 2025 - Final Year Project from Foo Sen Yang and Au Yong Ming Jian -
+				<a asp-area="" asp-controller="Home" asp-action="Privacy" class="link link-hover">
+					Privacy
+				</a>
+			</p>
+		</aside>
+	</footer>
+
+	<script src="~/lib/jquery/dist/jquery.min.js"></script>
+	<script src="~/js/jquery.unobtrusive-ajax.min.js"></script>
+	<script src="~/js/jquery.validate.min.js"></script>
+	<script src="~/js/jquery.validate.unobtrusive.min.js"></script>
+	<script src="~/js/site.js" asp-append-version="true"></script>
+	<script src="~/js/app.js" asp-append-version="true"></script>
+	<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+	<script>
+		(function () {
+			async function clearProfileCache() {
+				try {
+					if (window.indexedDB) {
+						const req = indexedDB.deleteDatabase('ProfileCache');
+						req.onsuccess = function () { console.debug('[Cache] ProfileCache deleted'); };
+						req.onerror = function () { console.warn('[Cache] Failed to delete ProfileCache'); };
+					}
+				} catch (e) {
+					console.warn('[Cache] clearProfileCache error', e);
+				}
+			}
+
+			try { window.clearProfileCache = clearProfileCache; } catch (e) {  }
+
+			document.addEventListener('click', function (e) {
+				const a = e.target && e.target.closest ? e.target.closest('a[href="/Account/Logout"]') : null;
+				if (!a) return;
+				e.preventDefault();
+				clearProfileCache().finally(function () {
+					window.location.href = a.href;
+				});
+			});
+		})();
+	</script>
+
+
+	@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

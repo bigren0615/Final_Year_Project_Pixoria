@@ -1,0 +1,116 @@
+﻿@model List<Final_Year_Project.Models.DB.ChatbotMessage>
+
+@{
+    int sessionId = Convert.ToInt32(Context.Request.Query["sessionId"]);
+}
+
+<div class="max-w-4xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+        <a href="/CustomerService/ChatSession" class="flex items-center text-gray-600 hover:text-gray-900 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Back to Chat Session</span>
+        </a>
+    </div>
+    <h1 class="text-2xl font-semibold mb-6">Customer Service Support</h1>
+
+    <div class="bg-white shadow rounded-lg p-4 h-[70vh] overflow-y-auto space-y-4" id="chatBox">
+        @foreach (var msg in Model)
+        {
+            if (msg.Sender == "user")
+            {
+                <div class="flex justify-end">
+                    <div class="bg-blue-600 text-white px-4 py-2 rounded-2xl max-w-md">
+                        @Html.Raw(msg.Content.Replace("\n", "<br>"))
+                        <div class="text-xs opacity-70">
+                            @msg.CreatedAt.ToString("g")
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="flex justify-start">
+                    <div class="bg-gray-200 text-gray-900 px-4 py-2 rounded-2xl max-w-md">
+                        @Html.Raw(msg.Content.Replace("\n", "<br>"))
+                        <div class="text-xs text-gray-500">
+                            @msg.CreatedAt.ToString("g")
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <form id="chatForm" class="mt-4 flex space-x-3">
+        <input type="hidden" name="sessionId" value="@sessionId" />
+        <input type="hidden" name="sender" value="user" />
+        <input id="messageInput" type="text" name="content" required
+               placeholder="Type your message..."
+               class="flex-grow border rounded-lg px-4 py-2" />
+
+        <button type="submit"
+                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Send
+        </button>
+    </form>
+
+</div>
+
+@section Scripts 
+{
+    <script>
+        var box = document.getElementById("chatBox");
+        box.scrollTop = box.scrollHeight;
+
+        document.getElementById("chatForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const form = e.currentTarget;
+            const data = new FormData(form);
+
+            // Add user message instantly into UI
+            let userMessage = data.get("content");
+            appendMessage("user", userMessage, new Date().toLocaleString());
+
+            document.getElementById("messageInput").value = "";
+
+            const response = await fetch('@Url.Action("SendMessage", "CustomerService")', {
+                method: "POST",
+                body: data
+            });
+
+            const result = await response.json();
+
+            appendMessage("bot", result.bot, result.timestamp);
+        });
+
+
+        function appendMessage(sender, content, time) {
+
+            const chatBox = document.getElementById("chatBox");
+
+            let bubbleClass = sender === "user"
+                ? "flex justify-end"
+                : "flex justify-start";
+
+            let bgClass = sender === "user"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-900";
+
+            const html = `
+                <div class="${bubbleClass}">
+                    <div class="${bgClass} px-4 py-2 rounded-2xl max-w-md">
+                        ${content.replace(/\n/g, "<br>")}
+                        <div class="text-xs opacity-70">${time}</div>
+                    </div>
+                </div>
+            `;
+
+            chatBox.insertAdjacentHTML("beforeend", html);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+
+}

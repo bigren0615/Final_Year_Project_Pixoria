@@ -1,0 +1,109 @@
+﻿@model Final_Year_Project.Models.Sales.SalesDashboardViewModel;
+@using System.Text.Json
+
+<div class="flex min-h-screen bg-gray-50">
+    @await Html.PartialAsync("_SellerCenterSidebar")
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        <h2 class="text-2xl font-bold mb-6">Sales Dashboard</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+
+            <div class="bg-white shadow rounded p-6 text-center">
+                <div class="text-gray-500 text-sm">Total Revenue</div>
+                <div class="text-3xl font-bold">RM @Model.TotalRevenue.ToString("N2")</div>
+            </div>
+
+            <div class="bg-white shadow rounded p-6 text-center">
+                <div class="text-gray-500 text-sm">Total Paid Orders</div>
+                <div class="text-3xl font-bold">@Model.TotalOrders</div>
+            </div>
+
+            <div class="bg-white shadow rounded p-6 text-center">
+                <div class="text-gray-500 text-sm">Average Order Value</div>
+                <div class="text-3xl font-bold">
+                    RM @((Model.TotalOrders == 0 ? 0 : Model.TotalRevenue / Model.TotalOrders).ToString("N2"))
+                </div>
+            </div>
+
+        </div>
+
+        <div class="bg-white shadow rounded p-6 mb-6">
+            <div class="flex gap-2 flex-wrap">
+                <a href="?period=30" class="btn btn-sm btn-outline @(Model.Period == 30 ? "btn-primary" : "")">Last 30 Days</a>
+                <a href="?period=365" class="btn btn-sm btn-outline @(Model.Period == 365 ? "btn-primary" : "")">Last 365 Days</a>
+                <a href="?period=all" class="btn btn-sm btn-outline @(Model.Period == 0 ? "btn-primary" : "")">All Time</a>
+            </div>
+        </div>
+
+
+        <!-- Chart -->
+        <div class="bg-white shadow rounded p-6 mb-10">
+            <h3 class="text-xl font-semibold mb-4">Sales Over Time</h3>
+
+            <canvas id="salesChart"></canvas>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="bg-white shadow rounded p-6">
+            <h3 class="text-xl font-semibold mb-4">Recent Paid Orders</h3>
+
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Buyer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var o in Model.RecentOrders)
+                    {
+                        <tr>
+                            <td>#@o.OrderId</td>
+                            <td>@o.OrderDate.ToString("dd/MM/yyyy")</td>
+                            <td>RM @o.TotalAmount.ToString("N2")</td>
+                            <td>@o.OrderStatus</td>
+                            <td>@o.BuyerName</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const data = {
+        labels: @Html.Raw(JsonSerializer.Serialize(Model.Dates)),
+        values: @Html.Raw(JsonSerializer.Serialize(Model.Totals))
+    };
+
+    const ctx = document.getElementById('salesChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: "Revenue",
+                data: data.values,
+                borderWidth: 2,
+                borderColor: '#7b46f6',
+                backgroundColor: 'rgba(123,70,246,0.2)',
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: false }
+            }
+        }
+    });
+</script>
+}

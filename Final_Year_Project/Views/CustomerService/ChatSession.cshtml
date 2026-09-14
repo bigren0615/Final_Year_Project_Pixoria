@@ -1,0 +1,75 @@
+﻿@model List<Final_Year_Project.Models.DB.ChatbotSession>
+
+<div class="max-w-4xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-semibold text-gray-800">Customer Service Chat</h1>
+
+        <!-- Create Session Button -->
+        <button onclick="openModal()"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            Start New Chat
+        </button>
+    </div>
+
+    <!-- Session List -->
+    <div class="bg-white rounded-lg shadow p-4">
+        @if (Model.Count == 0)
+        {
+            <p class="text-gray-500 text-center py-6">No chat sessions yet. Start one!</p>
+        }
+        else
+        {
+            foreach (var s in Model)
+            {
+                <a href="/CustomerService/ChatMessage?sessionId=@s.Id"
+                   class="block border-b last:border-none py-4 hover:bg-gray-50 transition">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-lg font-medium">@s.Title</p>
+                            <p class="text-sm text-gray-500">
+                                Updated: @s.UpdatedAt.ToString("g")
+                            </p>
+                        </div>
+                        <span class="text-blue-600 font-semibold">Open →</span>
+                    </div>
+                </a>
+            }
+        }
+    </div>
+</div>
+
+<!-- Modal Background -->
+<div id="createModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center">
+    <div class="bg-white w-full max-w-md rounded-lg p-6 shadow-lg">
+        <h2 class="text-xl font-semibold mb-4">Start New Chat</h2>
+
+        <form method="post" action="/CustomerService/CreateSession">
+            <label class="block mb-2 text-gray-700 font-medium">Chat Title</label>
+            <input type="text" name="title" required
+                   class="w-full border px-3 py-2 rounded-lg mb-4 focus:ring-2 focus:ring-blue-400">
+
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Create
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openModal() {
+            document.getElementById("createModal").classList.remove("hidden");
+        }
+        function closeModal() {
+            document.getElementById("createModal").classList.add("hidden");
+        }
+    </script>
+}

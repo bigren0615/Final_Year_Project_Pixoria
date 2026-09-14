@@ -1,0 +1,79 @@
+﻿@using Final_Year_Project.Models.Profile
+@using System.Security.Claims
+@model ProfileViewModel
+
+@{
+	var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+	var isOwner = currentUserId == Model?.UserId;
+}
+
+<div class="mt-10 mx-5">
+	@if (Model?.Products?.Any() == true)
+	{
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+			@foreach (var product in Model.Products)
+			{
+				<a href="/Sales/ArtistArtworkDetails/@product.PId">
+					<div class="card bg-base-100 shadow-md overflow-hidden">
+						<figure class="relative overflow-hidden bg-gray-300 h-40">
+							@if (!string.IsNullOrEmpty(product.PrimaryImage))
+							{
+								<img src="@product.PrimaryImage" alt="@product.ProductName" class="w-full h-full object-cover" />
+							}
+							else
+							{
+								<div class="w-full h-full flex items-center justify-center bg-gray-400">
+									<svg class="w-10 h-10 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+										<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+									</svg>
+								</div>
+							}
+						</figure>
+
+						<div class="card-body p-4">
+							<h3 class="font-bold text-base line-clamp-2">@product.ProductName</h3>
+							<p class="text-sm text-gray-600 line-clamp-2">@product.Description</p>
+							<div class="flex justify-between items-center mt-4 pt-3">
+								<span class="font-bold text-lg">RM @product.Price.ToString("F2")</span>
+							</div>
+						</div>
+					</div>
+				</a>
+			}
+		</div>
+
+		@if (isOwner)
+		{
+			<div class="flex justify-center mt-8">
+				<a href="/Sales/MyProduct" class="btn btn-primary text-white">
+					Seller Center
+				</a>
+			</div>
+		}
+	}
+	else
+	{
+		<section class="card shadow-md bg-base-100">
+			<div class="card-body">
+				<div class="flex flex-col items-center justify-center text-center py-16 rounded-box">
+					<div class="text-gray-500 text-lg">No products.</div>
+					@if (isOwner)
+					{
+						<a href="/Sales/MyProduct" class="btn btn-primary mt-4 text-white">
+							Seller Center
+						</a>
+					}
+				</div>
+			</div>
+		</section>
+	}
+</div>
+
+<style>
+	.line-clamp-2 {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+</style>

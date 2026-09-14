@@ -1,0 +1,161 @@
+﻿@using Final_Year_Project.Enums
+@model Final_Year_Project.Models.Profile.ProfileViewModel
+@inject Final_Year_Project.Services.EnumService EnumService
+@{
+	var currentPath = Context.Request.Path.Value?.ToLower() ?? "";
+}
+
+<div class="w-full bg-base-100 shadow-md overflow-hidden">
+	@if (!string.IsNullOrEmpty(Model.BannerImageUrl))
+	{
+		<div class="h-78 bg-gradient-to-r from-pink-200 to-pink-400 relative">
+		<img src="@Model.BannerImageUrl" alt="Profile Banner" class="w-full h-full object-cover select-none pointer-events-none" draggable="false" oncontextmenu="return false;">
+			@if (Model.IsOwner && Model.Role == usersRole.artist)
+			{
+				<a href="/Profile/@Model.UserId/edit" class="absolute top-3 right-3 bg-white px-4 py-1 rounded-full shadow text-sm hover:bg-gray-100">
+					Change Banner
+				</a>
+			}
+		</div>
+	}
+	else
+	{
+		<div class="h-48 bg-gradient-to-r from-pink-200 to-pink-400 relative">
+			@if (Model.IsOwner && Model.Role == usersRole.artist)
+			{
+				<a href="/Profile/@Model.UserId/edit" class="absolute top-3 right-3 bg-white px-4 py-1 rounded-full shadow text-sm hover:bg-gray-100">
+					Change Banner
+				</a>
+			}
+		</div>
+	}
+	<div class="p-6 flex flex-col md:flex-row md:items-center md:space-x-6">
+		<div class="-mt-16 md:mt-0">
+			<img src="@(!string.IsNullOrEmpty(Model.ProfilePicUrl) ? Model.ProfilePicUrl : Url.Content("~/images/blank_profile.webp"))"
+				 class="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover select-none pointer-events-none"
+				 alt="Artist Profile"
+				 draggable="false"
+				 oncontextmenu="return false;">
+
+		</div>
+		<div class="flex-1 mt-4 md:mt-0">
+			<h1 class="text-2xl font-bold text-gray-800">@(Model.Role == usersRole.artist ? Model.Nickname : Model.Name)</h1>
+			<p class="text-gray-600 mt-1">@@@Model.Username | @EnumService.GetEnumDisplayName(Model.Role)</p>
+			<p class="text-sm text-gray-500 mt-2">
+				Member since @Model.CreatedAt.ToString("MMM yyyy")
+			</p>
+		</div>
+		<div class="mt-4 md:mt-0">
+			@if (Model.IsOwner && Model.Role == usersRole.artist)
+			{
+				<a href="/Profile/@Model.UserId/edit" class="btn btn-primary text-white w-30">
+					Edit Profile
+				</a>
+			}
+			else if (Model.Role == usersRole.artist)
+			{
+				if (User.Identity != null && User.Identity.IsAuthenticated)
+				{
+					// Authenticated users get AJAX follow/unfollow so the page doesn't reload
+					<button id="headerFollowBtn" type="button" class="btn @((Model.IsFollow) ? "btn-outline btn-primary" : "btn-primary text-white") rounded-md w-30" onclick="toggleFollowHeader(@Model.UserId)">
+						<span id="headerFollowBtnText">@(Model.IsFollow ? "Following" : "Follow")</span>
+					</button>
+				}
+				else
+				{
+					// Keep server-side form for anonymous users so follow redirects to login
+					<form asp-action="Follow" asp-controller="Profile" method="post">
+						<input type="hidden" name="id" value="@Model.UserId" />
+						<button type="submit" class="btn btn-primary rounded-md text-white w-30">
+							Follow
+						</button>
+					</form>
+				}
+			}
+		</div>
+	</div>
+	@if (Model.Role == usersRole.artist)
+	{
+		<div class="px-6 border-b border-base-300 bg-base-100">
+			<div role="tablist" class="tabs tabs-border [--tab-border-color:var(--p)] text-primary">
+
+				<a href="/Profile/@Model.UserId"
+				   data-ajax
+				   class="tab tab-lg profile-tab hover:text-primary font-medium @(currentPath.EndsWith($"/profile/{Model.UserId}") ? "tab-active" : "")">
+					Home
+				</a>
+
+				<a href="/Profile/@Model.UserId/posts"
+				   data-ajax
+				   class="tab tab-lg profile-tab hover:text-primary font-medium @(currentPath.Contains("/posts") ? "tab-active" : "")">
+					Posts
+				</a>
+
+				<a href="/Profile/@Model.UserId/plans"
+				   data-ajax
+				   class="tab tab-lg profile-tab hover:text-primary font-medium @(currentPath.Contains("/plans") ? "tab-active" : "")">
+					Plans
+				</a>
+
+				<a href="/Profile/@Model.UserId/commissions"
+				   data-ajax
+				   class="tab tab-lg profile-tab hover:text-primary font-medium @(currentPath.Contains("/commissions") ? "tab-active" : "")">
+					Commissions
+				</a>
+
+				<a href="/Profile/@Model.UserId/products"
+				   data-ajax
+				   class="tab tab-lg profile-tab hover:text-primary font-medium @(currentPath.Contains("/products") ? "tab-active" : "")">
+					Products
+				</a>
+
+			</div>
+		</div>
+	}
+</div>
+<script>
+	async function toggleFollowHeader(artistId) {
+		const followBtn = document.getElementById('headerFollowBtn');
+		const followBtnText = document.getElementById('headerFollowBtnText');
+		if (!followBtn) return;
+
+		try {
+			const response = await fetch(`/Profile/ToggleFollow`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ artistId })
+			});
+
+			const data = await response.json();
+
+			if (data.success) {
+				if (data.isFollowing) {
+					followBtn.classList.remove('btn-primary', 'text-white');
+					followBtn.classList.add('btn-outline', 'btn-primary');
+					followBtnText.textContent = 'Following';
+				} else {
+					followBtn.classList.remove('btn-outline');
+					followBtn.classList.add('btn-primary', 'text-white');
+					followBtnText.textContent = 'Follow';
+				}
+				} else {
+				// if not authenticated, redirect to login
+				if (data.message && data.message.toLowerCase().includes('authenticated')) {
+					window.location.href = '/Account/Login';
+				}
+				alert(data.message || 'Error updating follow status');
+			}
+		} catch (err) {
+			console.error(err);
+			alert('An error occurred. Please try again.');
+		}
+	}
+	// Optionally initialize
+	document.addEventListener('DOMContentLoaded', function() {
+		const followBtn = document.getElementById('headerFollowBtn');
+		if (!followBtn) return;
+		// Razor sets the button text and classes already from Model.IsFollow
+	});
+</script>

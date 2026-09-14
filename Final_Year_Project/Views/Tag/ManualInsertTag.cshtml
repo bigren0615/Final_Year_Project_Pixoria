@@ -1,0 +1,41 @@
+﻿<div class="bg-white p-6 rounded-2xl shadow border border-pink-100">
+    <label class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+    <div id="tagWrapper"
+         class="flex flex-wrap items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-pink-400">
+
+        <!-- Existing Tags -->
+        <span class="flex items-center gap-1 bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm">
+            anime
+            <button type="button" class="text-pink-500 hover:text-pink-700">✕</button>
+        </span>
+        <span class="flex items-center gap-1 bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm">
+            digital-painting
+            <button type="button" class="text-pink-500 hover:text-pink-700">✕</button>
+        </span>
+
+        <!-- Input inside the tag box -->
+        <input id="tagInput" type="text" placeholder="Add tag"
+               class="flex-1 min-w-[120px] border-0 focus:ring-0 text-sm text-gray-700 placeholder-gray-400" />
+    </div>
+    <p class="text-xs text-gray-500 mt-2">💡 Tip: Add up to 10 relevant tags. Example: "anime", "portrait", "watercolor"</p>
+</div>
+
+<script>
+    const tagInput = document.getElementById("tagInput");
+    const tagWrapper = document.getElementById("tagWrapper");
+
+    tagInput.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            const tagText = tagInput.value.trim();
+            if (tagText) {
+                const tag = document.createElement("span");
+                tag.className = "flex items-center gap-1 bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm";
+                tag.innerHTML = `${tagText} <button type="button" class="text-pink-500 hover:text-pink-700">✕</button>`;
+                tag.querySelector("button").addEventListener("click", () => tag.remove());
+                tagWrapper.insertBefore(tag, tagInput);
+                tagInput.value = "";
+            }
+        }
+    });
+</script>

@@ -1,0 +1,159 @@
+﻿<div class="mt-10 mx-5">
+	@if (Model.Posts.Count == 0)
+	{
+		<section class="card shadow-md bg-base-100">
+			<div class="card-body">
+				<div class="flex flex-col items-center justify-center text-center py-16 rounded-box">
+					<div class="text-gray-500 text-lg">No posts.</div>
+					@if (Model.IsOwner)
+					{
+						<form asp-action="PostsAdd" asp-controller="Posts" method="post">
+							@Html.AntiForgeryToken()
+							<button type="submit" class="btn btn-primary mt-4 text-white">
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+									 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+									<path d="M8 4v8M4 8h8"
+										  stroke="currentColor" stroke-width="2.5"
+										  stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+								Add Post Now
+							</button>
+						</form>
+					}
+				</div>
+			</div>
+		</section>
+	}
+	else
+	{
+		@if (Model.IsOwner)
+		{
+			<div class="flex justify-center mt-8">
+				<form asp-action="PostsAdd" asp-controller="Posts" method="post">
+					@Html.AntiForgeryToken()
+					<button type="submit" class="btn btn-primary text-white flex items-center gap-2">
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+							 fill="none" viewBox="0 0 16 16" class="bi bi-plus">
+							<path d="M8 4v8M4 8h8"
+								  stroke="currentColor" stroke-width="2.5"
+								  stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						Add Post
+					</button>
+				</form>
+			</div>
+		}
+
+		<div id="posts-grid" class="pt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+			@foreach (var post in Model.Posts!)
+			{
+				<a href="/Posts/@post.PostId" class="block group">
+					<div class="card bg-base-100 border border-base-200 shadow-md overflow-hidden">
+						<figure class="h-60 overflow-hidden">
+							@if (!string.IsNullOrEmpty(post.CoverImageUrl))
+							{
+								<img src="@post.CoverImageUrl" alt="@post.Title" loading="lazy" class="w-full h-full object-cover" />
+							}
+							else
+							{
+								<img src="/images/no_image.jpg" alt="@post.Title" loading="lazy" class="w-full h-full object-cover" />
+							}
+						</figure>
+						<div class="card-body p-4 flex flex-col">
+							<h3 class="card-title text-xl font-semibold line-clamp-1">
+								@post.Title
+							</h3>
+							@if (post.Price != null && post.Price >= 0)
+							{
+								<p class="text-gray-500 h-18 text-sm font-medium">
+									@post.PlanTitle - RM @post.Price.ToString("F2")
+								</p>
+							}
+							else
+							{
+								<p class="text-gray-500 h-18 text-sm font-medium">
+									All User
+								</p>
+							}
+							<p class="text-xs text-gray-400 text-left">
+								@post.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")
+							</p>
+						</div>
+					</div>
+				</a>
+			}
+		</div>
+
+		<div id="posts-pagination" class="join flex justify-center mt-8">
+			@{
+				int current = (int?)ViewData["CurrentPage"] ?? 1;
+				int totalPages = (int?)ViewData["TotalPages"] ?? 1;
+
+				int maxButtons = 7;
+				int start, end;
+
+				if (totalPages <= maxButtons)
+				{
+					start = 1;
+					end = totalPages;
+				}
+				else
+				{
+					int half = maxButtons / 2;
+					if (current <= half + 1)
+					{
+						start = 1;
+						end = maxButtons;
+					}
+					else if (current >= totalPages - half)
+					{
+						end = totalPages;
+						start = totalPages - maxButtons + 1;
+					}
+					else
+					{
+						start = current - half;
+						end = start + maxButtons - 1;
+					}
+				}
+			}
+
+			@if (current > 1)
+			{
+				<a href="/Profile/@Model.UserId/posts?page=@(current - 1)"
+				   class="join-item btn btn-md"
+				   data-page="@(current - 1)">«</a>
+			}
+			else
+			{
+				<button class="join-item btn btn-md btn-disabled">«</button>
+			}
+
+			@for (int i = start; i <= end; i++)
+			{
+				if (i == current)
+				{
+					<button class="join-item btn btn-md btn-primary">@i</button>
+				}
+				else
+				{
+					<a href="/Profile/@Model.UserId/posts?page=@i"
+					   class="join-item btn btn-md"
+					   data-page="@i">@i</a>
+				}
+			}
+			@if (current < (int?)ViewData["TotalPages"])
+			{
+				<a href="/Profile/@Model.UserId/posts?page=@(current + 1)"
+				   class="join-item btn btn-md"
+				   data-page="@(current + 1)">»</a>
+			}
+			else
+			{
+				<button class="join-item btn btn-md btn-disabled">»</button>
+			}
+		</div>
+
+		<div id="infinite-scroll-sentinel" style="height: 1px;"></div>
+	}
+</div>

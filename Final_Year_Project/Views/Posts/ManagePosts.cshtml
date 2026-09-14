@@ -1,0 +1,601 @@
+﻿@model List<Final_Year_Project.Models.Posts.PostsViewModel>
+
+@{
+	ViewData["Title"] = "Manage Posts";
+}
+
+<div class="min-h-screen bg-base-200 py-8">
+	<div class="container mx-auto px-4">
+		<div class="flex items-center justify-between mb-6">
+			<h1 class="text-2xl font-bold">Manage your posts</h1>
+			<form asp-action="PostsAdd" asp-controller="Posts" method="post">
+				@Html.AntiForgeryToken()
+				<button type="submit" class="btn btn-primary text-white">
+					Create new post
+				</button>
+			</form>
+		</div>
+
+		@if (Model == null || !Model.Any())
+		{
+			<div class="card bg-base-100 shadow p-8 text-center">
+				<h2 class="text-lg font-semibold">You haven't published any posts yet</h2>
+				<p class="text-sm text-gray-500 mt-2">Create a new post and manage it here.</p>
+				<form asp-action="PostsAdd" asp-controller="Posts" method="post">
+					@Html.AntiForgeryToken()
+					<button type="submit" class="btn btn-primary mt-4 text-white">
+						Create your first post
+					</button>
+				</form>
+			</div>
+		}
+		else
+		{
+			<!-- Search and Filter Controls -->
+			<div class="card bg-base-100 shadow mb-6 p-4">
+				<div class="flex flex-col lg:flex-row gap-4 items-end">
+					<!-- Search Input -->
+					<div class="flex-1">
+						<label class="label">
+							<span class="label-text">Search posts</span>
+						</label>
+						<input type="text" id="searchInput" placeholder="Search by title..." class="input input-bordered w-full" />
+					</div>
+
+					<!-- Status Filter -->
+					<div class="flex-1">
+						<label class="label">
+							<span class="label-text">Filter by status</span>
+						</label>
+						<select id="statusFilter" class="select select-bordered w-full">
+							<option value="">All statuses</option>
+							<option value="published">Published</option>
+							<option value="private">Private</option>
+							<option value="draft">Draft</option>
+						</select>
+					</div>
+
+					<!-- View Toggle & Reset Buttons -->
+					<div class="flex gap-2">
+						<div class="join">
+							<button type="button" id="viewCardBtn" class="btn btn-sm btn-active join-item" title="Card view">
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+									<path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z" />
+								</svg>
+							</button>
+							<button type="button" id="viewTableBtn" class="btn btn-sm join-item" title="Table view">
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+									<path d="M3 3h18v2H3V3zm0 4h18v2H3V7zm0 4h18v2H3v-2zm0 4h18v2H3v-2z" />
+								</svg>
+							</button>
+						</div>
+						<button type="button" id="resetFilters" class="btn btn-outline btn-sm">Reset</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Posts Grid (Pixiv Fanbox Style) -->
+			<div id="postsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+				@foreach (var post in Model)
+				{
+					<div class="post-card group relative bg-base-100 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer" data-title="@(post.Title?.ToLower() ?? "")" data-status="@post.Status.ToString().ToLower()" data-post-id="@post.PostId">
+						<!-- Cover Image Container -->
+						<div class="relative w-full aspect-square bg-gray-200 overflow-hidden">
+							@if (!string.IsNullOrEmpty(post.CoverImageUrl))
+							{
+								<img src="@post.CoverImageUrl" alt="@post.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+							}
+							else
+							{
+								<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-300 to-gray-400">
+									<span class="text-gray-600 text-sm font-medium text-center px-4">No Image</span>
+								</div>
+							}
+
+							<!-- Status Badge Overlay -->
+							<div class="absolute top-2 right-2">
+								@switch (post.Status)
+								{
+									case Final_Year_Project.Enums.postsStatus.published:
+										<span class="badge badge-success gap-2">Published</span>
+										break;
+									case Final_Year_Project.Enums.postsStatus.@private:
+										<span class="badge badge-info gap-2">Private</span>
+										break;
+									case Final_Year_Project.Enums.postsStatus.draft:
+										<span class="badge badge-warning gap-2">Draft</span>
+										break;
+									default:
+										<span class="badge">Unknown</span>
+										break;
+								}
+							</div>
+
+						<!-- Hover Overlay with Actions -->
+						<div class="absolute inset-0 backdrop-blur-0 group-hover:backdrop-blur-sm transition-all duration-300 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+							@if (post.Status != Final_Year_Project.Enums.postsStatus.draft)
+							{
+								<a href="/Posts/@post.PostId" class="btn btn-sm btn-ghost text-white hover:bg-white hover:text-black">View</a>
+							}
+							<a href="/Posts/@post.PostId/edit" class="btn btn-sm btn-primary">Edit</a>
+						</div>
+						</div>
+
+						<!-- Post Info -->
+						<div class="p-3">
+							<!-- Title -->
+							<h3 class="font-semibold text-sm mb-1 line-clamp-2 h-10">
+								@if (string.IsNullOrEmpty(post.Title))
+								{
+									<span class="text-gray-400">No Title</span>
+								}
+								else
+								{
+									@post.Title
+								}
+							</h3>
+
+							<!-- Like Count -->
+							<div class="flex items-center gap-1 text-xs text-gray-500 mb-2">
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-400" viewBox="0 0 24 24" fill="currentColor">
+									<path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+								</svg>
+								<span>@post.LikeCount</span>
+							</div>
+
+							<!-- Plan Info -->
+							<div class="bg-blue-50 rounded p-2 mb-3 border border-blue-200">
+								<div class="text-xs font-semibold text-blue-700">
+									@post.PlanName
+								</div>
+								@if (post.PlanPrice.HasValue)
+								{
+									<div class="text-xs text-blue-600">
+										RM @post.PlanPrice.Value.ToString("0.00")
+									</div>
+								}
+							</div>
+
+							<!-- Date Info -->
+							<div class="flex flex-col gap-1 text-xs text-gray-600 mb-3">
+								<div>Created: @post.CreatedAt.ToString("MMM dd, yyyy")</div>
+								<div>Updated: @post.UpdatedAt.ToString("MMM dd, yyyy HH:mm")</div>
+							</div>
+
+							<!-- Action Buttons -->
+							<div class="flex flex-col gap-2">
+								@if (post.Status != Final_Year_Project.Enums.postsStatus.draft)
+								{
+									<form method="post" asp-action="PostsVisiToggle" asp-controller="Posts" class="w-full">
+										@Html.AntiForgeryToken()
+										<input type="hidden" name="id" value="@post.PostId" />
+										<button type="submit" class="btn btn-outline btn-xs w-full">Toggle Visibility</button>
+									</form>
+								}
+								<button class="btn btn-error btn-xs w-full" onclick="openDeleteModal(@post.PostId)">Delete</button>
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+
+			<!-- Posts Table View -->
+			<div id="postsTable" class="hidden card bg-base-100 shadow overflow-hidden">
+				<div class="overflow-x-auto">
+					<table class="table table-zebra w-full">
+						<thead>
+							<tr class="bg-base-200">
+								<th class="w-20">Image</th>
+								<th class="cursor-pointer hover:bg-base-300 select-none" data-sort="title">
+									<div class="flex items-center gap-1">
+										Title
+										<svg class="sort-icon w-4 h-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+										</svg>
+									</div>
+								</th>
+								<th class="cursor-pointer hover:bg-base-300 select-none" data-sort="likes">
+									<div class="flex items-center gap-1">
+										Likes
+										<svg class="sort-icon w-4 h-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+										</svg>
+									</div>
+								</th>
+								<th class="cursor-pointer hover:bg-base-300 select-none" data-sort="plan">
+									<div class="flex items-center gap-1">
+										Plan
+										<svg class="sort-icon w-4 h-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+										</svg>
+									</div>
+								</th>
+								<th class="cursor-pointer hover:bg-base-300 select-none" data-sort="status">
+									<div class="flex items-center gap-1">
+										Status
+										<svg class="sort-icon w-4 h-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+										</svg>
+									</div>
+								</th>
+								<th class="cursor-pointer hover:bg-base-300 select-none" data-sort="created">
+									<div class="flex items-center gap-1">
+										Created
+										<svg class="sort-icon w-4 h-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+										</svg>
+									</div>
+								</th>
+								<th class="cursor-pointer hover:bg-base-300 select-none" data-sort="updated">
+									<div class="flex items-center gap-1">
+										Updated
+										<svg class="sort-icon w-4 h-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+										</svg>
+									</div>
+								</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="postsTableBody">
+							@foreach (var post in Model)
+							{
+								<tr class="post-row" data-title="@(post.Title?.ToLower() ?? "")" data-status="@post.Status.ToString().ToLower()" data-likes="@post.LikeCount" data-plan="@(post.PlanName?.ToLower() ?? "")" data-created="@post.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")" data-updated="@post.UpdatedAt.ToString("yyyy-MM-ddTHH:mm:ss")">
+									<td>
+										<div class="w-20 h-20 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+											@if (!string.IsNullOrEmpty(post.CoverImageUrl))
+											{
+												<img src="@post.CoverImageUrl" alt="@post.Title" class="w-full h-full object-cover" loading="lazy" />
+											}
+											else
+											{
+												<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-300 to-gray-400">
+													<span class="text-gray-600 text-xs font-medium">No Image</span>
+												</div>
+											}
+										</div>
+									</td>
+									<td>
+										<div class="font-semibold line-clamp-2 max-w-xs">
+											@if (string.IsNullOrEmpty(post.Title))
+											{
+												<span class="text-gray-400">No Title</span>
+											}
+											else
+											{
+												@post.Title
+											}
+										</div>
+									</td>
+									<td>
+										<div class="flex items-center gap-1 text-sm">
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-400" viewBox="0 0 24 24" fill="currentColor">
+												<path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+											</svg>
+											<span>@post.LikeCount</span>
+										</div>
+									</td>
+									<td>
+										<div class="bg-blue-50 rounded p-2 border border-blue-200 min-w-max">
+											<div class="text-xs font-semibold text-blue-700">
+												@post.PlanName
+											</div>
+											@if (post.PlanPrice.HasValue)
+											{
+												<div class="text-xs text-blue-600">
+													RM @post.PlanPrice.Value.ToString("0.00")
+												</div>
+											}
+										</div>
+									</td>
+									<td>
+										@switch (post.Status)
+										{
+											case Final_Year_Project.Enums.postsStatus.published:
+												<span class="badge badge-success">Published</span>
+												break;
+											case Final_Year_Project.Enums.postsStatus.@private:
+												<span class="badge badge-info">Private</span>
+												break;
+											case Final_Year_Project.Enums.postsStatus.draft:
+												<span class="badge badge-warning">Draft</span>
+												break;
+											default:
+												<span class="badge">Unknown</span>
+												break;
+										}
+									</td>
+									<td class="text-sm text-gray-600">
+										@post.CreatedAt.ToString("MMM dd, yyyy")
+									</td>
+									<td class="text-sm text-gray-600">
+										@post.UpdatedAt.ToString("MMM dd, yyyy HH:mm")
+									</td>
+									<td>
+										<div class="flex gap-2 flex-wrap">
+											@if (post.Status != Final_Year_Project.Enums.postsStatus.draft)
+											{
+												<a href="/Posts/@post.PostId" class="btn btn-ghost btn-xs">View</a>
+												<form method="post" asp-action="PostsVisiToggle" asp-controller="Posts" class="inline">
+													@Html.AntiForgeryToken()
+													<input type="hidden" name="id" value="@post.PostId" />
+													<button type="submit" class="btn btn-outline btn-xs">Toggle</button>
+												</form>
+											}
+											<a href="/Posts/@post.PostId/edit" class="btn btn-primary btn-xs">Edit</a>
+											<button class="btn btn-error btn-xs" onclick="openDeleteModal(@post.PostId)">Delete</button>
+										</div>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- No results message -->
+			<div id="noResultsMessage" class="hidden text-center py-12">
+				<p class="text-gray-500 text-lg">No posts found matching your search or filter criteria.</p>
+			</div>
+		}
+	</div>
+</div>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		const searchInput = document.getElementById('searchInput');
+		const statusFilter = document.getElementById('statusFilter');
+		const resetButton = document.getElementById('resetFilters');
+		const postsGrid = document.getElementById('postsGrid');
+		const postsTable = document.getElementById('postsTable');
+		const postsTableBody = document.getElementById('postsTableBody');
+		const noResultsMessage = document.getElementById('noResultsMessage');
+		const viewCardBtn = document.getElementById('viewCardBtn');
+		const viewTableBtn = document.getElementById('viewTableBtn');
+
+		// Load saved view preference from localStorage
+		const savedViewMode = localStorage.getItem('postsViewMode') || 'card';
+		switchView(savedViewMode);
+
+		function switchView(mode) {
+			if (mode === 'table') {
+				postsGrid.classList.add('hidden');
+				postsTable.classList.remove('hidden');
+				viewCardBtn.classList.remove('btn-active');
+				viewTableBtn.classList.add('btn-active');
+				localStorage.setItem('postsViewMode', 'table');
+			} else {
+				postsGrid.classList.remove('hidden');
+				postsTable.classList.add('hidden');
+				viewCardBtn.classList.add('btn-active');
+				viewTableBtn.classList.remove('btn-active');
+				localStorage.setItem('postsViewMode', 'card');
+			}
+			filterPosts();
+		}
+
+		function filterPosts() {
+			const searchTerm = (searchInput.value || '').toLowerCase().trim();
+			const statusValue = (statusFilter.value || '').toLowerCase().trim();
+			let visibleCount = 0;
+
+			// Filter card view
+			if (!postsGrid.classList.contains('hidden')) {
+				const cards = postsGrid.querySelectorAll('.post-card');
+				cards.forEach(card => {
+					const title = card.getAttribute('data-title') || '';
+					const status = card.getAttribute('data-status') || '';
+
+					const matchesSearch = !searchTerm || title.includes(searchTerm);
+					const matchesStatus = !statusValue || status === statusValue;
+
+					if (matchesSearch && matchesStatus) {
+						card.style.display = '';
+						visibleCount++;
+					} else {
+						card.style.display = 'none';
+					}
+				});
+			}
+			// Filter table view
+			else {
+				const rows = postsTableBody.querySelectorAll('.post-row');
+				rows.forEach(row => {
+					const title = row.getAttribute('data-title') || '';
+					const status = row.getAttribute('data-status') || '';
+
+					const matchesSearch = !searchTerm || title.includes(searchTerm);
+					const matchesStatus = !statusValue || status === statusValue;
+
+					if (matchesSearch && matchesStatus) {
+						row.style.display = '';
+						visibleCount++;
+					} else {
+						row.style.display = 'none';
+					}
+				});
+			}
+
+			// Show/hide no results message
+			if (visibleCount === 0) {
+				noResultsMessage.classList.remove('hidden');
+				postsGrid.style.display = postsGrid.classList.contains('hidden') ? 'none' : 'none';
+				postsTable.style.display = postsTable.classList.contains('hidden') ? 'none' : 'none';
+			} else {
+				noResultsMessage.classList.add('hidden');
+				postsGrid.style.display = postsGrid.classList.contains('hidden') ? 'none' : '';
+				postsTable.style.display = postsTable.classList.contains('hidden') ? 'none' : '';
+			}
+		}
+
+		// Event listeners
+		searchInput.addEventListener('input', filterPosts);
+		statusFilter.addEventListener('change', filterPosts);
+
+		viewCardBtn.addEventListener('click', function () {
+			switchView('card');
+		});
+
+		viewTableBtn.addEventListener('click', function () {
+			switchView('table');
+		});
+
+		resetButton.addEventListener('click', function () {
+			searchInput.value = '';
+			statusFilter.value = '';
+			// Reset sort state
+			currentSortColumn = null;
+			currentSortDirection = 'asc';
+			updateSortIcons();
+			filterPosts();
+		});
+
+		// Table sorting functionality
+		let currentSortColumn = null;
+		let currentSortDirection = 'asc';
+
+		function updateSortIcons() {
+			const headers = document.querySelectorAll('[data-sort]');
+			headers.forEach(header => {
+				const icon = header.querySelector('.sort-icon');
+				if (!icon) return;
+				
+				const sortKey = header.getAttribute('data-sort');
+				if (sortKey === currentSortColumn) {
+					icon.classList.remove('opacity-50');
+					icon.classList.add('opacity-100');
+					// Update icon based on direction
+					if (currentSortDirection === 'asc') {
+						icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
+					} else {
+						icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
+					}
+				} else {
+					icon.classList.add('opacity-50');
+					icon.classList.remove('opacity-100');
+					icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />';
+				}
+			});
+		}
+
+		function sortTable(column) {
+			if (currentSortColumn === column) {
+				currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+			} else {
+				currentSortColumn = column;
+				currentSortDirection = 'asc';
+			}
+
+			updateSortIcons();
+
+			const rows = Array.from(postsTableBody.querySelectorAll('.post-row'));
+			
+			rows.sort((a, b) => {
+				let valueA, valueB;
+				
+				switch (column) {
+					case 'title':
+						valueA = a.getAttribute('data-title') || '';
+						valueB = b.getAttribute('data-title') || '';
+						break;
+					case 'likes':
+						valueA = parseInt(a.getAttribute('data-likes')) || 0;
+						valueB = parseInt(b.getAttribute('data-likes')) || 0;
+						break;
+					case 'plan':
+						valueA = a.getAttribute('data-plan') || '';
+						valueB = b.getAttribute('data-plan') || '';
+						break;
+					case 'status':
+						valueA = a.getAttribute('data-status') || '';
+						valueB = b.getAttribute('data-status') || '';
+						break;
+					case 'created':
+						valueA = new Date(a.getAttribute('data-created') || 0);
+						valueB = new Date(b.getAttribute('data-created') || 0);
+						break;
+					case 'updated':
+						valueA = new Date(a.getAttribute('data-updated') || 0);
+						valueB = new Date(b.getAttribute('data-updated') || 0);
+						break;
+					default:
+						return 0;
+				}
+
+				let comparison = 0;
+				if (column === 'likes') {
+					comparison = valueA - valueB;
+				} else if (column === 'created' || column === 'updated') {
+					comparison = valueA - valueB;
+				} else {
+					comparison = valueA.localeCompare(valueB);
+				}
+
+				return currentSortDirection === 'asc' ? comparison : -comparison;
+			});
+
+			// Re-append rows in sorted order
+			rows.forEach(row => postsTableBody.appendChild(row));
+		}
+
+		// Add click handlers to sortable headers
+		const sortableHeaders = document.querySelectorAll('[data-sort]');
+		sortableHeaders.forEach(header => {
+			header.addEventListener('click', function () {
+				const sortKey = this.getAttribute('data-sort');
+				sortTable(sortKey);
+			});
+		});
+
+		// Delete modal handling
+		window.openDeleteModal = function(postId) {
+			document.getElementById('deletePostId').value = postId;
+			document.getElementById('deleteModal').showModal();
+		};
+
+		window.confirmDelete = function() {
+			const postId = document.getElementById('deletePostId').value;
+			const form = document.createElement('form');
+			form.method = 'POST';
+			form.action = '/Posts/PostsDelete';
+			
+			const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+			if (csrfToken) {
+				const tokenInput = document.createElement('input');
+				tokenInput.type = 'hidden';
+				tokenInput.name = '__RequestVerificationToken';
+				tokenInput.value = csrfToken;
+				form.appendChild(tokenInput);
+			}
+			
+			const idInput = document.createElement('input');
+			idInput.type = 'hidden';
+			idInput.name = 'id';
+			idInput.value = postId;
+			form.appendChild(idInput);
+			
+			document.body.appendChild(form);
+			form.submit();
+		};
+
+		window.cancelDelete = function() {
+			document.getElementById('deleteModal').close();
+		};
+	});
+</script>
+
+<!-- Delete Confirmation Modal -->
+<dialog id="deleteModal" class="modal">
+	<div class="modal-box w-11/12 max-w-md">
+		<h3 class="font-bold text-lg">Delete Post</h3>
+		<p class="py-4">Are you sure you want to delete this post? This will permanently delete the post and its files.</p>
+		<div class="modal-action">
+			<button type="button" class="btn btn-ghost" onclick="cancelDelete()">Cancel</button>
+			<button type="button" class="btn btn-error" onclick="confirmDelete()">Delete</button>
+		</div>
+		<input type="hidden" id="deletePostId" value="" />
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button type="button" onclick="cancelDelete()">close</button>
+	</form>
+</dialog>

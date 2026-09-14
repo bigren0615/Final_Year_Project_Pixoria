@@ -1,0 +1,33 @@
+﻿@model Final_Year_Project.Models.OrderHistory.ReviewViewModel
+
+<div class="max-w-xl mx-auto mt-10 bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">Write a Review</h2>
+
+    <div class="flex items-center mb-4">
+        <img src="@Model.ImagePath" class="w-20 h-20 rounded mr-4" />
+        <div>
+            <p class="font-semibold">@Model.ProductName</p>
+        </div>
+    </div>
+
+    <form method="post" asp-action="SubmitReview">
+        <input type="hidden" name="PId" value="@Model.PId" />
+
+        <label class="block mb-2 font-semibold">Rating:</label>
+        <select name="Star" class="border rounded p-2 mb-4 w-full" required>
+            <option value="">Select rating</option>
+            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+            <option value="4">⭐⭐⭐⭐ (4)</option>
+            <option value="3">⭐⭐⭐ (3)</option>
+            <option value="2">⭐⭐ (2)</option>
+            <option value="1">⭐ (1)</option>
+        </select>
+
+        <label class="block mb-2 font-semibold">Comment (optional):</label>
+        <textarea name="Comment" rows="4" class="border rounded p-2 w-full mb-4"></textarea>
+
+        <button class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+            Submit Review
+        </button>
+    </form>
+</div>

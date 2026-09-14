@@ -1,0 +1,57 @@
+﻿@model Final_Year_Project.Models.Account.RegisterViewModel
+
+@{
+    ViewBag.Title = "Register";
+}
+
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-white">
+    <div class="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 border border-rose-100">
+
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-primary">Create Account</h1>
+        </div>
+
+        <div class="flex gap-3 mb-6">
+            <a href="/Account/Register?role=customer"
+               class="flex-1 text-center py-2 rounded-xl border @(Model.Role == "customer" ? "bg-primary text-white" : "bg-white")">
+                Sign up as Customer
+            </a>
+
+            <a href="/Account/Register?role=artist"
+               class="flex-1 text-center py-2 rounded-xl border @(Model.Role == "artist" ? "bg-primary text-white" : "bg-white")">
+                Sign up as Artist
+            </a>
+        </div>
+
+        <partial name="_RegisterFormPartial" model="Model" />
+
+        <p class="text-center text-sm text-gray-500 mt-6">
+            Already have an account?
+            <a href="/Account/Login" class="text-primary hover:underline font-medium">Log in</a>
+        </p>
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        function togglePassword(inputId, eyeId, eyeSlashId) {
+            const input = document.getElementById(inputId);
+            const eye = document.getElementById(eyeId);
+            const eyeSlash = document.getElementById(eyeSlashId);
+
+            if (input.type === "password") {
+                input.type = "text";
+                eye.classList.add("hidden");
+                eyeSlash.classList.remove("hidden");
+            } else {
+                input.type = "password";
+                eye.classList.remove("hidden");
+                eyeSlash.classList.add("hidden");
+            }
+        }
+    </script>
+}
+

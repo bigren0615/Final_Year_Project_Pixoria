@@ -1,0 +1,147 @@
+﻿@using Final_Year_Project.Enums
+@using Final_Year_Project.Services
+@inject Final_Year_Project.Services.EnumService EnumService
+@model IEnumerable<Final_Year_Project.Models.Sales.SellerOrderViewModel>
+@{
+    ViewData["Title"] = "Seller Center";
+    var profile = ViewBag.ProfilePic;
+}
+
+<div class="flex min-h-screen bg-gray-50">
+    @await Html.PartialAsync("_SellerCenterSidebar")
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p class="font-semibold text-gray-800">@User.Identity?.Name</p>
+                    <p class="text-sm text-gray-500">Artist</p>
+                </div>
+                <img src="/uploads/profile_pic/@profile" alt="Profile" class="w-10 h-10 rounded-full border border-gray-300" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+                <h3 class="text-gray-500 text-sm mb-1">Total Orders</h3>
+                <p class="text-4xl font-bold text-pink-600">@ViewBag.TotalOrders</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+                <h3 class="text-gray-500 text-sm mb-1">Total Paid Orders</h3>
+                <p class="text-4xl font-bold text-pink-600">@ViewBag.TotalPaidOrders</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+                <h3 class="text-gray-500 text-sm mb-1">Total Revenue</h3>
+                <p class="text-4xl font-bold text-green-600">
+                    RM @String.Format("{0:N2}", ViewBag.TotalRevenue)
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+                <h3 class="text-gray-500 text-sm mb-1">Active Listings</h3>
+                <p class="text-4xl font-bold text-blue-600">@ViewBag.ActiveListings</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="p-5 border-b flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-700">Recent Orders</h2>
+                <a href="@Url.Action("MyOrderList", "Sales")" class="text-sm text-pink-600 hover:underline">View All</a>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Order ID</th>
+                            <th class="px-6 py-3 text-left">Date</th>
+                            <th class="px-6 py-3 text-left">Payment Status</th>
+                            <th class="px-6 py-3 text-left">Delivery Status</th>
+                            <th class="px-6 py-3 text-left">Order Status</th>
+                            <th class="px-6 py-3 text-right">Total (RM)</th>
+                            <th class="px-6 py-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach (var o in Model)
+                        {
+                            var payment = EnumService.ToEnum<orderPaymentStatus>(o.PaymentStatus);
+                            var order = EnumService.ToEnum<orderStatus>(o.OrderStatus);
+                            var delivery = EnumService.ToEnum<deliveryStatus>(o.DeliveryStatus);
+
+                            string paymentText = EnumService.GetEnumDisplayName(payment);
+                            string orderText = EnumService.GetEnumDisplayName(order);
+                            string deliveryText = EnumService.GetEnumDisplayName(delivery);
+
+                            string paymentBadgeColor = payment switch
+                            {
+                                orderPaymentStatus.paid => "bg-green-100 text-green-700",
+                                orderPaymentStatus.pending => "bg-yellow-100 text-yellow-700",
+                                orderPaymentStatus.refunded => "bg-blue-100 text-blue-700",
+                                _ => "bg-gray-100 text-gray-700"
+                            };
+
+                            string deliveryBadgeColor = delivery switch
+                            {
+                                deliveryStatus.packed => "bg-indigo-100 text-indigo-700",
+                                deliveryStatus.shipped => "bg-blue-100 text-blue-700",
+                                deliveryStatus.delivered => "bg-green-100 text-green-700",
+                                deliveryStatus.returned => "bg-red-100 text-red-700",
+                                deliveryStatus.pending => "bg-yellow-100 text-yellow-700",
+                                _ => "bg-gray-100 text-gray-700"
+                            };
+
+                            string orderBadgeColor = order switch
+                            {
+                                orderStatus.confirmed => "bg-green-100 text-green-700",
+                                orderStatus.processing => "bg-purple-100 text-purple-700",
+                                orderStatus.completed => "bg-green-100 text-green-700",
+                                orderStatus.cancelled => "bg-red-100 text-red-700",
+                                orderStatus.refunded => "bg-blue-100 text-blue-700",
+                                orderStatus.pending => "bg-yellow-100 text-yellow-700",
+                                _ => "bg-gray-100 text-gray-700"
+                            };
+
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-3 font-semibold text-gray-800">@o.OrderId</td>
+                                <td class="px-6 py-3 text-gray-600">@o.OrderDate.ToString("yyyy-MM-dd")</td>
+
+                                <td class="px-6 py-3">
+                                    <span class="px-3 py-1 text-xs rounded-full @paymentBadgeColor">
+                                        @paymentText
+                                    </span>
+                                </td>
+
+                                <td class="px-6 py-3">
+                                    <span class="px-3 py-1 text-xs rounded-full @deliveryBadgeColor">
+                                        @deliveryText
+                                    </span>
+                                </td>
+
+                                <td class="px-6 py-3">
+                                    <span class="px-3 py-1 text-xs rounded-full @orderBadgeColor">
+                                        @orderText
+                                    </span>
+                                </td>
+
+                                <td class="px-6 py-3 text-right font-semibold text-gray-800">
+                                    @String.Format("{0:N2}", o.TotalAmount)
+                                </td>
+
+                                <td class="px-6 py-3 text-center">
+                                    <a href="@Url.Action("OrderDetails", "Sales", new { oId = o.OrderId })"
+                                       class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>

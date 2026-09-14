@@ -1,0 +1,14 @@
+﻿@{
+    ViewBag.Title = "Verify Account";
+}
+
+<div class="container mt-5 text-center">
+    <h1>Email Verification Required</h1>
+
+    <p>Please check your email to complete the registration of your account.</p>
+    <p>If you cannot find the email, check your spam folder.</p>
+    <p>
+        Didn’t get the email?
+        <a href="@Url.Action("ResendVerification", "Account")">Click here to resend.</a>
+    </p>
+</div>

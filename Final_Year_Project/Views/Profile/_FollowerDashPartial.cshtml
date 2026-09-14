@@ -1,0 +1,519 @@
+﻿@model Final_Year_Project.Models.Profile.FollowerDashViewModel
+
+<section class="card shadow-md bg-base-100 mb-6">
+	<div class="card-body">
+		<div class="flex flex-col gap-4">
+			<div class="flex justify-between items-center">
+				<h2 class="text-xl font-bold">Follower & Subscriber Summary</h2>
+				<div class="flex gap-2 flex-wrap justify-end">
+					<button class="btn btn-sm btn-outline period-btn active" data-period="30">Last 30 Days</button>
+					<button class="btn btn-sm btn-outline period-btn" data-period="90">Last 90 Days</button>
+					<button class="btn btn-sm btn-outline period-btn" data-period="365">Last 365 Days</button>
+					<button class="btn btn-sm btn-outline period-btn" data-period="all">All Time</button>
+				</div>
+			</div>
+
+			<div class="flex flex-col md:flex-row gap-4 items-center justify-center">
+				<div class="flex gap-4 flex-wrap justify-center">
+					<label class="label cursor-pointer gap-2">
+						<input type="checkbox" id="showFollowers" class="checkbox" checked />
+						<span class="label-text font-semibold">New Followers</span>
+					</label>
+					<label class="label cursor-pointer gap-2">
+						<input type="checkbox" id="showSubscribers" class="checkbox" checked />
+						<span class="label-text font-semibold">New Subscribers</span>
+					</label>
+				</div>
+			</div>
+
+			<canvas id="summaryChart" class="w-full max-w-2xl mx-auto"></canvas>
+		</div>
+	</div>
+</section>
+
+<section class="card shadow-md bg-base-100 mb-6">
+	<div class="card-body">
+		<h2 class="text-xl font-bold mb-4">Subscription Revenue Summary</h2>
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+			<div class="flex flex-col items-center justify-center p-4 bg-base-200 rounded-lg">
+				<span class="text-sm text-gray-500 mb-2">Total Collected</span>
+				<span class="text-3xl font-bold text-primary" id="totalCollected">RM 0.00</span>
+			</div>
+			<div class="flex flex-col items-center justify-center p-4 bg-base-200 rounded-lg">
+				<span class="text-sm text-gray-500 mb-2">Service Tax Deducted</span>
+				<span class="text-3xl font-bold text-warning" id="totalTax">RM 0.00</span>
+			</div>
+			<div class="flex flex-col items-center justify-center p-4 bg-base-200 rounded-lg">
+				<span class="text-sm text-gray-500 mb-2">Received Revenue</span>
+				<span class="text-3xl font-bold text-success" id="totalRevenue">RM 0.00</span>
+			</div>
+		</div>
+	</div>
+</section>
+
+<section class="card shadow-md bg-base-100">
+	<div class="card-body">
+		<div class="flex flex-col gap-4">
+			<div class="flex justify-between items-center flex-wrap gap-3">
+				<h2 class="text-xl font-bold">Current Subscriber & Follower Details</h2>
+				<div class="flex gap-2 flex-wrap">
+					<select id="filterSelect" class="select select-bordered select-sm">
+						<option value="both" selected>Both</option>
+						<option value="followers">Followers Only</option>
+						<option value="subscribers">Subscribers Only</option>
+					</select>
+				</div>
+			</div>
+
+			<div id="detailsList" class="space-y-3 max-h-96 overflow-y-auto">
+				<!-- Items will be populated by JavaScript -->
+			</div>
+
+			<div class="flex justify-center gap-2 mt-4">
+				<button id="prevBtn" class="btn btn-sm btn-outline" disabled>Previous</button>
+				<div id="pageInfo" class="flex items-center px-4">Page 1 of 1</div>
+				<button id="nextBtn" class="btn btn-sm btn-outline" disabled>Next</button>
+			</div>
+		</div>
+	</div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+	function safeJsonParse(json, fallback) {
+		try {
+			if (typeof json === 'string') {
+				return JSON.parse(json);
+			}
+			return json || fallback;
+		} catch (e) {
+			console.error('JSON parse error:', e);
+			return fallback;
+		}
+	}
+
+	const chartDataServer = safeJsonParse(
+		@Html.Raw(Model.ChartData != null ? System.Text.Json.JsonSerializer.Serialize(Model.ChartData) : "null"),
+		{"period30":{"followers":0,"subscribers":0,"total":0},"period90":{"followers":0,"subscribers":0,"total":0},"period365":{"followers":0,"subscribers":0,"total":0},"periodall":{"followers":0,"subscribers":0,"total":0}}
+	);
+	const followers = safeJsonParse(
+		@Html.Raw(Model.Followers != null ? System.Text.Json.JsonSerializer.Serialize(Model.Followers) : "null"),
+		[]
+	);
+	const subscribers = safeJsonParse(
+		@Html.Raw(Model.Subscribers != null ? System.Text.Json.JsonSerializer.Serialize(Model.Subscribers) : "null"),
+		[]
+	);
+
+	console.log('=== Dashboard Data ===');
+	console.log('Chart Data:', chartDataServer);
+	console.log('Followers count:', followers?.length || 0);
+	console.log('Subscribers count:', subscribers?.length || 0);
+
+	function calculateRevenue() {
+		try {
+			if (!subscribers || subscribers.length === 0) {
+				document.getElementById('totalCollected').textContent = 'RM 0.00';
+				document.getElementById('totalTax').textContent = 'RM 0.00';
+				document.getElementById('totalRevenue').textContent = 'RM 0.00';
+				return;
+			}
+
+			console.log('All subscribers:', subscribers);
+			console.log('Sample subscriber:', subscribers[0]);
+
+			// Only include subscribers with "paid" payment status (0 = paid enum value)
+			const paidSubscribers = subscribers.filter(s => {
+				const status = s.PaymentStatus;
+				console.log('Checking subscriber PaymentStatus:', status, 'Type:', typeof status);
+				return status === 0 || status === '0' || status === 'paid' || status === 'Paid';
+			});
+
+			console.log('Paid subscribers count:', paidSubscribers.length);
+			console.log('Paid subscribers:', paidSubscribers);
+			
+			const totalCollected = paidSubscribers.reduce((sum, s) => {
+				const amount = s.TotalAmount || 0;
+				console.log('Adding TotalAmount:', amount, 'Running total:', sum + amount);
+				return sum + amount;
+			}, 0);
+			
+			const totalTax = paidSubscribers.reduce((sum, s) => sum + (s.ServiceTax || 0), 0);
+			const totalRevenue = totalCollected - totalTax;
+
+			console.log('Revenue Calculation:');
+			console.log('Total Paid Subscribers:', paidSubscribers.length);
+			console.log('Total Collected:', totalCollected);
+			console.log('Total Tax:', totalTax);
+			console.log('Total Revenue:', totalRevenue);
+
+			document.getElementById('totalCollected').textContent = 'RM ' + totalCollected.toFixed(2);
+			document.getElementById('totalTax').textContent = 'RM ' + totalTax.toFixed(2);
+			document.getElementById('totalRevenue').textContent = 'RM ' + totalRevenue.toFixed(2);
+		} catch (error) {
+			console.error('Error calculating revenue:', error);
+		}
+	}
+
+		let currentChart = null;
+		let currentPeriod = "30";
+		let currentFilter = "both";
+		let currentPage = 1;
+		const itemsPerPage = 10;
+
+		function initChart() {
+			try {
+				console.log('Initializing chart for period:', currentPeriod);
+				
+				const canvasElement = document.getElementById('summaryChart');
+				if (!canvasElement) {
+					console.error('Canvas element not found');
+					return;
+				}
+
+				const ctx = canvasElement.getContext('2d');
+				const periodKey = 'period' + currentPeriod;
+				const periodData = chartDataServer[periodKey];
+				
+				if (!periodData) {
+					console.error('Period data not found for key:', periodKey);
+					console.log('Available keys:', Object.keys(chartDataServer));
+					return;
+				}
+
+				const showFollowers = document.getElementById('showFollowers')?.checked ?? true;
+				const showSubscribers = document.getElementById('showSubscribers')?.checked ?? true;
+
+				console.log('Show followers:', showFollowers, 'Show subscribers:', showSubscribers);
+
+				const datasets = [];
+				if (showFollowers) {
+					datasets.push({
+						label: 'New Followers',
+						data: periodData.followers || [],
+						backgroundColor: '#0ea5e9',
+						borderColor: '#0284c7',
+						borderWidth: 2
+					});
+				}
+				if (showSubscribers) {
+					datasets.push({
+						label: 'New Subscribers',
+						data: periodData.subscribers || [],
+						backgroundColor: '#8b5cf6',
+						borderColor: '#7c3aed',
+						borderWidth: 2
+					});
+				}
+
+				if (datasets.length === 0) {
+					console.warn('No datasets to display');
+					return;
+				}
+
+				if (currentChart) {
+					currentChart.destroy();
+				}
+
+				currentChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+						labels: periodData.dates || [],
+						datasets: datasets
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: true,
+						plugins: {
+							legend: {
+								display: true,
+								position: 'top'
+							}
+						},
+						scales: {
+							y: {
+								beginAtZero: true,
+								ticks: {
+									stepSize: 1
+								},
+								title: {
+									display: true,
+									text: 'Person'
+								}
+							},
+							x: {
+								title: {
+									display: true,
+									text: 'Date'
+								},
+								barPercentage: 0.7,
+								categoryPercentage: 0.8
+							}
+						}
+					}
+				});
+				console.log('Chart initialized successfully');
+			} catch (error) {
+				console.error('Error initializing chart:', error);
+			}
+		}
+
+		function renderDetails() {
+			try {
+				console.log('Rendering details for filter:', currentFilter, 'page:', currentPage);
+				
+				const detailsList = document.getElementById('detailsList');
+				if (!detailsList) {
+					console.error('Details list element not found');
+					return;
+				}
+				detailsList.innerHTML = '';
+
+				let items = [];
+				
+				if (currentFilter === 'followers' || currentFilter === 'both') {
+					if (followers && followers.length > 0) {
+						items = items.concat(followers.map(f => ({
+							type: 'Follower',
+							displayName: f.DisplayName || 'Unknown User',
+							profilePicUrl: f.ProfilePicUrl || '~/images/blank_profile.webp',
+							date: f.FDate ? new Date(f.FDate).toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'}) : 'N/A',
+							userId: f.FollowerId
+						})));
+					}
+				}
+				
+				if (currentFilter === 'subscribers' || currentFilter === 'both') {
+					if (subscribers && subscribers.length > 0) {
+						// Only include active subscriptions
+						const activeSubscribers = subscribers.filter(s => {
+							const st = s.Status;
+							// enum may be serialized as number (0 = active) or string 'active'
+							return st === 0 || st === '0' || st === 'active' || st === 'Active';
+						});
+
+						items = items.concat(activeSubscribers.map(s => ({
+							type: 'Subscriber',
+							displayName: s.DisplayName || 'Unknown User',
+							profilePicUrl: s.ProfilePicUrl || '~/images/blank_profile.webp',
+							date: s.StartDate ? new Date(s.StartDate).toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'}) : 'N/A',
+							userId: s.UId,
+							startDate: s.StartDate,
+							endDate: s.EndDate,
+							status: s.Status,
+							isExpired: s.EndDate && new Date(s.EndDate) < new Date()
+							,
+							planTitle: s.PlanTitle,
+							planPrice: s.PlanPrice
+						})));
+					}
+				}
+
+				console.log('Total items before pagination:', items.length);
+
+				// Sort by date descending
+				items.sort((a, b) => {
+					try {
+						const aDate = new Date(a.date);
+						const bDate = new Date(b.date);
+						return bDate - aDate;
+					} catch (e) {
+						return 0;
+					}
+				});
+
+				const totalPages = Math.ceil(items.length / itemsPerPage) || 1;
+				const startIdx = (currentPage - 1) * itemsPerPage;
+				const endIdx = startIdx + itemsPerPage;
+				const pageItems = items.slice(startIdx, endIdx);
+
+				console.log('Page items:', pageItems.length, 'of', items.length, 'total');
+
+				if (pageItems.length === 0) {
+					const emptyMsg = items.length === 0 
+						? 'No followers or subscribers yet' 
+						: 'No items on this page';
+					detailsList.innerHTML = '<div class="text-center py-8 text-gray-500">' + emptyMsg + '</div>';
+				} else {
+					pageItems.forEach(item => {
+						const itemEl = document.createElement('a');
+						itemEl.href = `/Profile/${item.userId}`;
+						itemEl.className = 'flex items-center gap-3 p-3 rounded-lg bg-base-200 hover:bg-base-300 transition cursor-pointer';
+						const badgeColor = 'secondary';
+						const firstChar = (item.displayName || 'U').charAt(0).toUpperCase();
+						
+						let innerHTML = `
+							<div class="avatar placeholder w-10 h-10 flex-shrink-0">
+								<div class="bg-neutral text-neutral-content rounded-full w-10">
+						`;
+						
+						if (item.profilePicUrl && item.profilePicUrl !== '~/images/blank_profile.webp') {
+							innerHTML += `<img src="${item.profilePicUrl}" alt="${item.displayName}" class="w-10 h-10 rounded-full object-cover" />`;
+						} else {
+							innerHTML += `<img src="/images/blank_profile.webp" alt="${item.displayName}" class="w-10 h-10 rounded-full object-cover" />`;
+						}
+						
+						innerHTML += `
+								</div>
+							</div>
+							<div class="flex-1">
+								<div class="font-semibold">${item.displayName}</div>
+								<div class="text-sm text-gray-500">${item.date}</div>
+						`;
+						
+						// Add subscription details if it's a subscriber
+						if (item.type === 'Subscriber') {
+							const startDate = item.startDate ? new Date(item.startDate).toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'}) : 'N/A';
+							const endDate = item.endDate ? new Date(item.endDate).toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'}) : 'Ongoing';
+							const statusDisplay = item.isExpired ? 'Expired' : 'Active';
+							const statusColor = item.isExpired ? 'error' : 'success';
+							
+							innerHTML += `
+								<div class="text-xs text-gray-400 mt-1">
+									Subscribed: ${startDate} → ${endDate}
+								</div>
+								<div class="text-xs text-gray-400 mt-1">
+									Plan: <span class="font-semibold">${item.planTitle || 'Unknown'}</span>
+									<span class="ml-2 text-gray-600">RM ${item.planPrice ? Number(item.planPrice).toFixed(2) : '0.00'}</span>
+								</div>
+							`;
+						}
+						
+						innerHTML += `
+							</div>
+							<div class="badge badge-${badgeColor}">${item.type}</div>
+						`;
+						
+						itemEl.innerHTML = innerHTML;
+						detailsList.appendChild(itemEl);
+					});
+				}
+
+				const pageInfoEl = document.getElementById('pageInfo');
+				if (pageInfoEl) {
+					pageInfoEl.textContent = `Page ${currentPage} of ${Math.max(1, totalPages)}`;
+				}
+				const prevBtn = document.getElementById('prevBtn');
+				const nextBtn = document.getElementById('nextBtn');
+				if (prevBtn) prevBtn.disabled = currentPage <= 1;
+				if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+
+			} catch (error) {
+				console.error('Error rendering details:', error);
+			}
+		}
+
+		function setupEventListeners() {
+			console.log('Setting up event listeners...');
+			
+			const periodButtons = document.querySelectorAll('.period-btn');
+			console.log('Found', periodButtons.length, 'period buttons');
+			
+			periodButtons.forEach(btn => {
+				btn.addEventListener('click', function() {
+					periodButtons.forEach(b => b.classList.remove('active'));
+					this.classList.add('active');
+					currentPeriod = this.dataset.period;
+					currentPage = 1;
+					console.log('Period changed to:', currentPeriod);
+					initChart();
+				});
+			});
+
+			const showFollowersCheckbox = document.getElementById('showFollowers');
+			if (showFollowersCheckbox) {
+				showFollowersCheckbox.addEventListener('change', () => {
+					console.log('Followers checkbox changed');
+					initChart();
+				});
+			}
+
+			const showSubscribersCheckbox = document.getElementById('showSubscribers');
+			if (showSubscribersCheckbox) {
+				showSubscribersCheckbox.addEventListener('change', () => {
+					console.log('Subscribers checkbox changed');
+					initChart();
+				});
+			}
+
+			const filterSelect = document.getElementById('filterSelect');
+			if (filterSelect) {
+				filterSelect.addEventListener('change', function() {
+					currentFilter = this.value;
+					currentPage = 1;
+					console.log('Filter changed to:', currentFilter);
+					renderDetails();
+				});
+			}
+
+			const prevBtn = document.getElementById('prevBtn');
+			if (prevBtn) {
+				prevBtn.addEventListener('click', () => {
+					if (currentPage > 1) {
+						currentPage--;
+						console.log('Previous page:', currentPage);
+						renderDetails();
+					}
+				});
+			}
+
+				const nextBtn = document.getElementById('nextBtn');
+			if (nextBtn) {
+				nextBtn.addEventListener('click', () => {
+					// Pagination must compute counts based on the currently applied filter
+					let itemsCount = 0;
+					if (currentFilter === 'followers') {
+						itemsCount = followers.length;
+					} else if (currentFilter === 'subscribers') {
+						// Only active subscriptions are shown in the details list
+						itemsCount = (subscribers || []).filter(s => {
+							const st = s.Status;
+							return st === 0 || st === '0' || st === 'active' || st === 'Active';
+						}).length;
+					} else {
+						// Both: followers + active subscribers
+						itemsCount = followers.length + (subscribers || []).filter(s => {
+							const st = s.Status;
+							return st === 0 || st === '0' || st === 'active' || st === 'Active';
+						}).length;
+					}
+
+					const items = itemsCount;
+					const totalPages = Math.ceil(items / itemsPerPage) || 1;
+					if (currentPage < totalPages) {
+						currentPage++;
+						console.log('Next page:', currentPage);
+						renderDetails();
+					}
+				});
+			}
+			
+			console.log('Event listeners setup complete');
+		}
+
+		function initializeDashboard() {
+			console.log('=== Initializing Dashboard ===');
+			calculateRevenue();
+			setupEventListeners();
+			initChart();
+			renderDetails();
+			console.log('=== Dashboard Ready ===');
+		}
+
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', initializeDashboard);
+		} else {
+			setTimeout(initializeDashboard, 100);
+		}
+	</script>
+	<style>
+		#summaryChart {
+			max-height: 300px;
+		}
+		.period-btn.active {
+			background-color: var(--fallback-n,oklch(var(--n)));
+			border-color: var(--fallback-n,oklch(var(--n)));
+			color: var(--fallback-nc,oklch(var(--nc)));
+		}
+	</style>
+</script>
